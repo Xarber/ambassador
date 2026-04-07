@@ -12,6 +12,7 @@ const stylelintConfig = {
           "plugin",
           "source",
           "theme",
+          "utility",
         ],
       },
     ],
