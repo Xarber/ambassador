@@ -23,7 +23,7 @@ export default async function LoginPage() {
           <Input
             type="email"
             placeholder={t("app.login.email-placeholder")}
-            className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-base text-white shadow-none placeholder:text-accent focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+            className="h-auto rounded-none border-0 bg-transparent px-0 py-0 text-base text-white shadow-none placeholder:text-foreground focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
           />
           <button className="flex w-14 shrink-0 cursor-pointer items-center justify-center bg-primary text-white">
             <span className="text-4xl font-bold leading-none">&rsaquo;</span>

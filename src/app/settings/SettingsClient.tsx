@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,10 @@ export default function SettingsClient({
     "ui-input-surface h-14 w-full rounded-lg border-0 px-4 text-base focus-visible:ring-1 focus-visible:ring-white/15",
     "disabled:cursor-not-allowed disabled:text-white/50",
   );
+  const readOnlySurfaceClass = cn(
+    surfaceClass,
+    "text-foreground disabled:opacity-100 disabled:text-foreground disabled:[-webkit-text-fill-color:var(--foreground)]",
+  );
 
   const handleSave = async () => {
     setSaving(true);
@@ -96,11 +101,11 @@ export default function SettingsClient({
         <label className="mb-2 block font-body text-base tracking-wide text-white">
           {t("labels.name")}
         </label>
-        <input
+        <Input
           type="text"
           disabled
           value={displayName}
-          className={surfaceClass}
+          className={readOnlySurfaceClass}
         />
       </div>
 
@@ -110,22 +115,22 @@ export default function SettingsClient({
             <label className="mb-2 block font-body text-base tracking-wide text-white">
               {t("labels.first-name")}
             </label>
-            <input
+            <Input
               type="text"
               disabled
               value={firstName}
-              className={surfaceClass}
+              className={readOnlySurfaceClass}
             />
           </div>
           <div>
             <label className="mb-2 block font-body text-base tracking-wide text-white">
               {t("labels.last-name")}
             </label>
-            <input
+            <Input
               type="text"
               disabled
               value={lastName}
-              className={surfaceClass}
+              className={readOnlySurfaceClass}
             />
           </div>
         </div>
@@ -135,11 +140,11 @@ export default function SettingsClient({
         <label className="mb-2 block font-body text-base tracking-wide text-white">
           {t("labels.email")}
         </label>
-        <input
+        <Input
           type="email"
           disabled
           value={email}
-          className={surfaceClass}
+          className={readOnlySurfaceClass}
         />
       </div>
 
@@ -148,11 +153,11 @@ export default function SettingsClient({
           <label className="mb-2 block font-body text-base tracking-wide text-white">
             {t("labels.slack")}
           </label>
-          <input
+          <Input
             type="text"
             disabled
             value={slackName}
-            className={surfaceClass}
+            className={readOnlySurfaceClass}
           />
         </div>
       )}
@@ -162,11 +167,11 @@ export default function SettingsClient({
           <label className="mb-2 block font-body text-base tracking-wide text-white">
             {t("labels.verification-status")}
           </label>
-          <input
+          <Input
             type="text"
             disabled
             value={verificationStatus}
-            className={surfaceClass}
+            className={readOnlySurfaceClass}
           />
         </div>
       )}
@@ -179,11 +184,11 @@ export default function SettingsClient({
             {t("labels.shipping-address")}
           </label>
           {addresses.length === 1 ? (
-            <input
+            <Input
               type="text"
               disabled
               value={formatHackClubAddress(addresses[0])}
-              className={surfaceClass}
+              className={readOnlySurfaceClass}
             />
           ) : (
             <Select
