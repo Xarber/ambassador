@@ -9,6 +9,8 @@ import summer26Fg from "@/assets/landing/logo/summer-26-fg.png";
 import highlight from "@/assets/landing/highlight.svg";
 import flagHoldingText from "@/assets/landing/flagholdingtext.png";
 
+import partyparrot from "@/assets/landing/emoji/partyparrot.gif";
+
 import blueprint from "@/assets/landing/events/blueprint.png";
 import campfireFlagship from "@/assets/landing/events/campfire-flagship.png";
 import midnight from "@/assets/landing/events/midnight.jpg";
@@ -145,7 +147,12 @@ export default function Home() {
             <em>@events.hackclub.com </em> email, and we&rsquo;ll give you Hack
             Club t-shirts and merch. Plus, for every poster you put up, and
             every signup you get, <strong>we give you money.</strong> Real
-            money. To your bank account.
+            money. To your bank account.{" "}
+            <Image
+              src={partyparrot}
+              alt=""
+              className="size-8 object-contain inline-block mb-1.5 ml-1"
+            />
           </p>
           <p>Ready?</p>
 
