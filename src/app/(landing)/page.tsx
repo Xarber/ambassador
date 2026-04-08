@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 
 import ambassador from "@/assets/landing/logo/ambassador.png";
@@ -31,6 +32,10 @@ import hcRounded from "@/assets/landing/hc-rounded.svg";
 
 import sep from "@/assets/landing/sep.png";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Ambassadors // Landing",
+};
 
 const Sep = ({
   className = "",

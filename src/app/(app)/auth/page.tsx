@@ -1,10 +1,15 @@
 import Icon from "@hackclub/icons";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { Input } from "@/components/ui/input";
 import { getSession } from "@/lib/session";
+
+export const metadata: Metadata = {
+  title: "Ambassadors // Login",
+};
 
 export default async function LoginPage() {
   const session = await getSession();

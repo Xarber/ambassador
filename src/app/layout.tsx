@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("app.metadata");
 
   return {
-    title: t("title"),
+    title: "Ambassadors",
     description: t("description"),
     icons: {
       icon: "/favicon.ico",

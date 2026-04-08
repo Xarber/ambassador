@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { SlackAvatar } from "@/components/admin/slack-profile";
@@ -6,6 +7,10 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { pillVariants } from "@/components/ui/pill";
 import sql from "@/lib/db";
 import { ensureSchema } from "@/lib/ensure-schema";
+
+export const metadata: Metadata = {
+  title: "Admin // Applications",
+};
 
 export default async function AdminApplicationsPage() {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);

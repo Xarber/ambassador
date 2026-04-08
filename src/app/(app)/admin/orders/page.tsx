@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+
+export const metadata: Metadata = {
+  title: "Admin // Orders",
+};
 
 export default async function AdminOrdersPage() {
   const t = await getTranslations();

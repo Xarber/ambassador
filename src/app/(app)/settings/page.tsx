@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -8,6 +9,10 @@ import { getSession } from "@/lib/session";
 import { ensureUserAddressSchema } from "@/lib/user-address-schema";
 
 import SettingsClient from "./SettingsClient";
+
+export const metadata: Metadata = {
+  title: "Ambassadors // Settings",
+};
 
 export default async function SettingsPage() {
   const session = await getSession();

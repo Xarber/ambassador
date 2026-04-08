@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -9,6 +10,10 @@ import { listPosterDataForUser } from "@/lib/posters/service";
 import { getSession } from "@/lib/session";
 
 import { PostersClient } from "./PostersClient";
+
+export const metadata: Metadata = {
+  title: "Ambassadors // Posters",
+};
 
 export default async function PostersPage() {
   const session = await getSession();

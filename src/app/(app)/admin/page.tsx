@@ -5,6 +5,7 @@ import {
   type DashboardFunnelPoint,
 } from "@/components/admin/admin-dashboard-charts";
 import Icon from "@hackclub/icons";
+import type { Metadata } from "next";
 import type { ComponentProps } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import {
@@ -42,6 +43,10 @@ const activityRangeDays = {
 } as const;
 
 type ActivityRange = keyof typeof activityRangeDays;
+
+export const metadata: Metadata = {
+  title: "Admin // Overview",
+};
 
 export default async function AdminDashboard({
   searchParams,

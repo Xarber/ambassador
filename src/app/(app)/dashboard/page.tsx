@@ -1,4 +1,5 @@
 import Icon from "@hackclub/icons";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { ComponentProps, ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -41,6 +42,10 @@ const toneBg: Record<Tone, string> = {
 };
 
 const STEP_ORDER: StepKey[] = ["apply", "verify", "review", "decision"];
+
+export const metadata: Metadata = {
+  title: "Ambassadors // Dashboard",
+};
 
 export default async function DashboardPage({
   searchParams,

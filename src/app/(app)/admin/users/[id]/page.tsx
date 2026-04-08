@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -13,6 +14,10 @@ import sql from "@/lib/db";
 import { ensureSchema } from "@/lib/ensure-schema";
 import { formatDate, formatDateTime, joinNonEmpty } from "@/lib/format";
 import { ensureUserAddressSchema } from "@/lib/user-address-schema";
+
+export const metadata: Metadata = {
+  title: "Admin // Users",
+};
 
 export default async function AdminUserDetailPage({
   params,

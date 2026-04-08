@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,10 @@ import { ensureSchema } from "@/lib/ensure-schema";
 import { formatDate, formatDateTime, joinNonEmpty } from "@/lib/format";
 import { tryParseJson } from "@/lib/parse";
 import { ensureUserAddressSchema } from "@/lib/user-address-schema";
+
+export const metadata: Metadata = {
+  title: "Admin // Applications",
+};
 
 export default async function AdminApplicationDetailPage({
   params,
