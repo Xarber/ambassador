@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { DetailFieldRow, DetailPager, DetailSection } from "@/components/admin/detail";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { buttonVariants } from "@/components/ui/button";
+import { pillVariants } from "@/components/ui/pill";
 import { Textarea } from "@/components/ui/textarea";
 import { isRejectedPermanentlyApplicationStatus } from "@/lib/applications";
 import sql from "@/lib/db";
@@ -38,6 +40,7 @@ export default async function AdminUserDetailPage({
            hca_locality, hca_region, hca_postal_code, hca_country, slack_id, slack_name,
            slack_avatar_url, verification_status, is_admin, last_ip, latitude, longitude, city,
            region, country_code, country_name, postal_code, timezone, org, hca_addresses,
+           posters_enabled,
            permanently_rejected_at, permanent_rejection_note, created_at, updated_at
     FROM users
     WHERE id = ${id}
@@ -123,7 +126,7 @@ export default async function AdminUserDetailPage({
                 <>
                   <StatusBadge status={latestApplication.status} />
                   {shouldShowLatestApplicationLabel ? (
-                    <span className="rounded-lg bg-acceptance px-3 py-1 text-sm text-black">
+                    <span className={pillVariants({ tone: "green" })}>
                       {t("admin.user-detail.latest-application")}
                     </span>
                   ) : null}
@@ -132,7 +135,7 @@ export default async function AdminUserDetailPage({
                 <span className="text-sm text-white">{t("admin.user-detail.no-application")}</span>
               )}
               {shouldShowPermanentRejectionLabel && (
-                <span className="rounded-lg bg-rejection px-3 py-1 text-sm text-white">
+                <span className={pillVariants({ tone: "red" })}>
                   {t("admin.user-detail.user-permanently-rejected")}
                 </span>
               )}
@@ -141,9 +144,10 @@ export default async function AdminUserDetailPage({
           {latestApplication ? (
             <Link
               href={`/admin/applications/${latestApplication.id}`}
-              className="inline-flex rounded-xl bg-secondary px-4 py-2 font-body text-sm text-black transition-opacity hover:opacity-80"
+              aria-label={t("admin.user-detail.open-latest-application")}
+              className="ui-open-link inline-flex font-body text-lg leading-none"
             >
-              {t("admin.user-detail.open-latest-application")}
+              <span aria-hidden="true">↗</span>
             </Link>
           ) : null}
         </div>
@@ -155,7 +159,7 @@ export default async function AdminUserDetailPage({
       >
         <a
           href={`/api/auth/refresh?next=${encodeURIComponent(`/admin/users/${user.id}`)}`}
-          className="inline-flex rounded-xl bg-primary px-6 py-3 font-body text-sm text-white transition-opacity hover:opacity-80"
+          className={buttonVariants({ size: "app" })}
         >
           {t("app.navbar.refresh-session")}
         </a>
@@ -168,7 +172,7 @@ export default async function AdminUserDetailPage({
                 <span className="font-body text-sm text-white">{latestApplication.id}</span>
                 <StatusBadge status={latestApplication.status} />
                 {shouldShowLatestApplicationLabel ? (
-                  <span className="rounded-lg bg-acceptance px-3 py-1 text-sm text-black">
+                  <span className={pillVariants({ tone: "green" })}>
                     {t("admin.user-detail.latest-application")}
                   </span>
                 ) : null}
@@ -177,7 +181,7 @@ export default async function AdminUserDetailPage({
 
             <form action={`/api/admin/users/${user.id}/approve`} method="POST" className="max-w-xl space-y-3">
               <input type="hidden" name="redirectTo" value={`/admin/users/${user.id}`} />
-              <button className="rounded-xl bg-acceptance px-6 py-3 font-body text-sm text-black transition-colors hover:bg-white">
+              <button className={buttonVariants({ variant: "success", size: "app" })}>
                 {t("admin.user-detail.actions.bypass-approval")}
               </button>
             </form>
@@ -190,11 +194,11 @@ export default async function AdminUserDetailPage({
                   name="note"
                   required
                   rows={5}
-                  className="ui-input-surface mt-2 min-h-24 resize-none border-white bg-transparent px-5 py-4 text-base hover:bg-transparent md:text-base"
+                  className="ui-input-surface mt-2 min-h-24 resize-none border-white bg-transparent px-5 py-4 font-body text-base font-normal placeholder:font-normal hover:bg-transparent md:text-base"
                   placeholder={t("admin.user-detail.actions.reject-note-placeholder")}
                 />
               </label>
-              <button className="rounded-xl bg-rejection px-6 py-3 font-body text-sm text-white transition-colors hover:bg-white hover:text-black">
+              <button className={buttonVariants({ size: "app" })}>
                 {t("admin.user-detail.actions.reject")}
               </button>
             </form>
@@ -210,11 +214,11 @@ export default async function AdminUserDetailPage({
                 <Textarea
                   name="note"
                   rows={4}
-                  className="ui-input-surface mt-2 min-h-20 resize-none border-white bg-transparent px-5 py-4 text-base hover:bg-transparent md:text-base"
+                  className="ui-input-surface mt-2 min-h-20 resize-none border-white bg-transparent px-5 py-4 font-body text-base font-normal placeholder:font-normal hover:bg-transparent md:text-base"
                   placeholder={t("admin.user-detail.actions.permanent-rejection-note-placeholder")}
                 />
               </label>
-              <button className="rounded-xl bg-rejection px-6 py-3 font-body text-sm text-white transition-colors hover:bg-white hover:text-black">
+              <button className={buttonVariants({ size: "app" })}>
                 {t("admin.user-detail.actions.reject-permanently")}
               </button>
             </form>
@@ -224,6 +228,30 @@ export default async function AdminUserDetailPage({
             {t("admin.user-detail.actions.no-review-target")}
           </p>
         )}
+      </DetailSection>
+
+      <DetailSection
+        title={t("admin.user-detail.sections.flags.title")}
+        description={t("admin.user-detail.sections.flags.description")}
+      >
+        <form action={`/api/admin/users/${user.id}/flags`} method="POST" className="max-w-xl space-y-4">
+          <input type="hidden" name="redirectTo" value={`/admin/users/${user.id}`} />
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              name="postersEnabled"
+              value="true"
+              defaultChecked={Boolean(user.posters_enabled)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-body text-sm text-white">
+              {t("admin.user-detail.flags.posters-enabled")}
+            </span>
+          </label>
+          <button className={buttonVariants({ size: "app" })}>
+            {t("admin.user-detail.actions.save-flags")}
+          </button>
+        </form>
       </DetailSection>
 
       <DetailSection
@@ -266,6 +294,7 @@ export default async function AdminUserDetailPage({
         />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.last-seen-ip")} value={user.last_ip} mono />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.admin")} value={user.is_admin ? t("common.yes") : t("common.no")} />
+        <DetailFieldRow label={t("admin.user-detail.profile-fields.posters-enabled")} value={user.posters_enabled ? t("common.yes") : t("common.no")} />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.created")} value={formatDateTime(user.created_at, locale)} />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.updated")} value={formatDateTime(user.updated_at, locale)} />
       </DetailSection>
@@ -292,9 +321,13 @@ export default async function AdminUserDetailPage({
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <StatusBadge status={application.status} />
-                        {latestApplication?.id === application.id && (
-                          <span className="rounded-lg bg-acceptance px-3 py-1 text-sm text-black">
+                        {latestApplication?.id === application.id ? (
+                          <span className={pillVariants({ tone: "green" })}>
                             {t("common.latest")}
+                          </span>
+                        ) : (
+                          <span className={pillVariants({ tone: "black" })}>
+                            {t("admin.applications-list.history")}
                           </span>
                         )}
                       </div>
@@ -303,9 +336,10 @@ export default async function AdminUserDetailPage({
                     <td className="px-4 py-4">
                       <Link
                         href={`/admin/applications/${application.id}`}
-                        className="inline-flex rounded-xl bg-secondary px-3 py-1.5 font-body text-sm text-black transition-opacity hover:opacity-80"
+                        aria-label={t("admin.user-detail.applications.view")}
+                        className="ui-open-link inline-flex font-body text-lg leading-none"
                       >
-                        {t("admin.user-detail.applications.view")}
+                        <span aria-hidden="true">↗</span>
                       </Link>
                     </td>
                   </tr>
@@ -346,7 +380,7 @@ export default async function AdminUserDetailPage({
 
       <DetailSection
         title={t("admin.user-detail.sections.visits.title")}
-        description={t("admin.user-detail.sections.visits.description")}
+        description={t("admin.user-detail.sections.visits.description", { duration: "10 minutes" })}
       >
         <div className="space-y-4">
           {visits.length > 0 ? (

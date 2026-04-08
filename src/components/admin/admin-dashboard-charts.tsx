@@ -106,15 +106,16 @@ export function AdminDashboardCharts({
                   <Button
                     key={option.value}
                     asChild
-                    size="sm"
-                    variant="default"
-                    className={
-                      option.value === activeRange
-                        ? "bg-white !text-black hover:bg-white hover:!text-black"
-                        : "bg-primary text-white hover:bg-white hover:text-black"
-                    }
+                    size="app-sm"
+                    variant="destructive"
+                    selected={option.value === activeRange}
                   >
-                    <Link href={href}>{option.label}</Link>
+                    <Link
+                      href={href}
+                      aria-current={option.value === activeRange ? "page" : undefined}
+                    >
+                      {option.label}
+                    </Link>
                   </Button>
                 );
               })}

@@ -10,7 +10,7 @@ export function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 p-5 md:p-6">
+    <section className="!rounded-none border border-white/10 bg-card p-5 md:p-6">
       <h2 className="text-2xl text-white">{title}</h2>
       <p className="mt-2 max-w-3xl font-body text-base text-white">{description}</p>
       <div className="mt-5 space-y-5">{children}</div>
@@ -66,8 +66,8 @@ export function DetailPager({
   }
 
   const className = outlined
-    ? "inline-flex rounded-xl border border-secondary px-3 py-1.5 font-body text-sm text-secondary transition-colors hover:border-white hover:text-white"
-    : "inline-flex rounded-xl bg-secondary px-3 py-1.5 font-body text-sm text-black transition-opacity hover:opacity-80";
+    ? "inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80"
+    : "inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80";
 
   return (
     <div className="flex items-center gap-2 pt-1">

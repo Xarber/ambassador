@@ -3,6 +3,7 @@ import {
   getApplicationStatusMeta,
   normalizeApplicationStatus,
 } from "@/lib/applications";
+import { pillVariants } from "@/components/ui/pill";
 
 export async function StatusBadge({ status }: { status: string | null | undefined }) {
   const t = await getTranslations();
@@ -12,11 +13,11 @@ export async function StatusBadge({ status }: { status: string | null | undefine
     ? applicationStatusMeta[normalizedStatus]
     : {
         label: status ?? t("common.unknown"),
-        className: "bg-white/20 text-white",
+        tone: "black" as const,
       };
 
   return (
-    <span className={`inline-flex rounded-lg px-3 py-1 font-body text-sm ${meta.className}`}>
+    <span className={pillVariants({ tone: meta.tone })}>
       {meta.label}
     </span>
   );

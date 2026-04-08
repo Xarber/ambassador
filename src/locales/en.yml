@@ -262,7 +262,7 @@ admin:
       submitted: Submitted
       open: Open
     latest: Latest
-    history: History
+    history: Historical
     view-details: View details
     empty: No applications yet
   users-list:
@@ -306,7 +306,7 @@ admin:
         description: Newest first for this user.
       visits:
         title: Visits
-        description: All visits, 3 at a time.
+        description: Visit log that is created by visits with a gap of at least {duration}
       orders:
         title: Orders
         description: Recent order records for this user.
@@ -365,6 +365,7 @@ admin:
       hca-city-and-region: HCA city and region
       hca-postal-code: HCA postal code
       hca-country: HCA country
+      hca-addresses: HCA addresses
       user-location: User location
       postal-code: Postal code
       timezone: Timezone
@@ -392,6 +393,9 @@ admin:
       user-actions:
         title: User Actions
         description: All of these controls target the newest application on file.
+      flags:
+        title: Flags
+        description: Enable or disable per-user feature flags.
       user-profile:
         title: User Profile
         description: Current account and location data.
@@ -406,7 +410,7 @@ admin:
         description: User-level lockout state.
       visits:
         title: Visits
-        description: All visits, 3 at a time.
+        description: Visit log that is created by visits with a gap of at least {duration}
       orders:
         title: Orders
         description: Recent order records tied to this account.
@@ -419,7 +423,10 @@ admin:
       permanent-rejection-note-label: Permanent rejection note
       permanent-rejection-note-placeholder: Optional context for permanent rejection
       reject-permanently: Reject permanently
+      save-flags: Save flags
       no-review-target: This user does not have any applications yet, so there is no review target to update.
+    flags:
+      posters-enabled: Enable posters page
     profile-fields:
       display-name: Display name
       first-name: First name
@@ -440,6 +447,7 @@ admin:
       coordinates: Coordinates
       last-seen-ip: Last seen IP
       admin: Admin
+      posters-enabled: Posters enabled
       created: Created
       updated: Updated
     applications:

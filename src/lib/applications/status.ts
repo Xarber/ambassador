@@ -81,23 +81,23 @@ export function getApplicationStatusMeta(t: Translate) {
   return {
     [APPLICATION_STATUS_PENDING_AUTOMATIC_CHECKS]: {
       label: t("status.pending-automatic-checks"),
-      className: "bg-secondary text-black",
+      tone: "black",
     },
     [APPLICATION_STATUS_PENDING_REVIEW]: {
       label: t("status.pending-review"),
-      className: "bg-secondary text-black",
+      tone: "black",
     },
     [APPLICATION_STATUS_ACCEPTED]: {
       label: t("status.accepted"),
-      className: "bg-acceptance text-black",
+      tone: "green",
     },
     [APPLICATION_STATUS_REJECTED]: {
       label: t("status.rejected"),
-      className: "bg-secondary text-black",
+      tone: "red",
     },
     [APPLICATION_STATUS_REJECTED_PERMANENT]: {
       label: t("status.rejected-permanent"),
-      className: "bg-rejection text-white",
+      tone: "red",
     },
   } as const;
 }

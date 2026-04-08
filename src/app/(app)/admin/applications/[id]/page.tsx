@@ -6,11 +6,14 @@ import { DeleteApplicationButton } from "@/components/admin/delete-application-b
 import { DetailFieldRow, DetailPager, DetailSection } from "@/components/admin/detail";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { buttonVariants } from "@/components/ui/button";
+import { pillVariants } from "@/components/ui/pill";
 import { Textarea } from "@/components/ui/textarea";
 import sql from "@/lib/db";
 import { ensureSchema } from "@/lib/ensure-schema";
 import { formatDate, formatDateTime, joinNonEmpty } from "@/lib/format";
 import { tryParseJson } from "@/lib/parse";
+import { ensureUserAddressSchema } from "@/lib/user-address-schema";
 
 export default async function AdminApplicationDetailPage({
   params,
@@ -30,6 +33,7 @@ export default async function AdminApplicationDetailPage({
     ? Math.floor(requestedVisitsPage)
     : 1;
   await ensureSchema();
+  await ensureUserAddressSchema();
 
   const [application] = await sql`
     SELECT a.id, a.user_id, a.status, a.name, a.applicant_email, a.applicant_slack_id,
@@ -44,6 +48,7 @@ export default async function AdminApplicationDetailPage({
            COALESCE(latest.id, a.id) AS latest_application_id,
            u.display_name AS user_name, u.email AS user_email, u.hca_first_name, u.hca_last_name,
            u.hca_street_address, u.hca_locality, u.hca_region, u.hca_postal_code, u.hca_country,
+           u.hca_addresses,
            u.slack_id AS user_slack_id, u.slack_name AS user_slack_name,
            u.slack_avatar_url AS user_slack_avatar_url, u.hca_id AS user_hca_id, u.verification_status,
            u.last_ip AS user_last_ip, u.city AS user_city, u.region AS user_region,
@@ -110,6 +115,12 @@ export default async function AdminApplicationDetailPage({
   const isLatest = application.latest_application_id === application.id;
   const totalVisitPages = Math.max(1, Math.ceil(visitCountResult / 3));
   const currentVisitPage = Math.min(visitsPage, totalVisitPages);
+  const addresses = Array.isArray(application.hca_addresses)
+    ? application.hca_addresses.filter(
+        (address): address is Record<string, unknown> =>
+          !!address && typeof address === "object",
+      )
+    : [];
 
   return (
     <div className="space-y-10">
@@ -135,7 +146,7 @@ export default async function AdminApplicationDetailPage({
             <div className="flex flex-wrap items-center gap-3">
               <StatusBadge status={application.status} />
               {isLatest ? (
-                <span className="rounded-lg bg-acceptance px-3 py-1 text-sm text-black">
+                <span className={pillVariants({ tone: "green" })}>
                   {t("admin.application-detail.latest-application")}
                 </span>
               ) : (
@@ -146,9 +157,10 @@ export default async function AdminApplicationDetailPage({
           {application.user_id ? (
             <Link
               href={`/admin/users/${application.user_id}`}
-              className="inline-flex rounded-xl border border-secondary px-4 py-2 font-body text-sm text-secondary transition-colors hover:border-white hover:text-white"
+              aria-label={t("admin.application-detail.open-user-page")}
+              className="ui-open-link inline-flex font-body text-lg leading-none"
             >
-              {t("admin.application-detail.open-user-page")}
+              <span aria-hidden="true">↗</span>
             </Link>
           ) : null}
         </div>
@@ -162,7 +174,7 @@ export default async function AdminApplicationDetailPage({
           </p>
           <Link
             href={`/admin/applications/${application.latest_application_id}`}
-            className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 font-body text-sm text-white transition-colors hover:bg-white hover:text-black"
+            className={`${buttonVariants({ size: "app-sm" })} mt-4`}
           >
             {t("admin.application-detail.locked.cta")}
           </Link>
@@ -182,7 +194,7 @@ export default async function AdminApplicationDetailPage({
           <div className="space-y-6">
             <form action={`/api/admin/applications/${application.id}/approve`} method="POST" className="max-w-xl space-y-3">
               <input type="hidden" name="redirectTo" value={`/admin/applications/${application.id}`} />
-              <button className="rounded-xl bg-acceptance px-6 py-3 font-body text-sm text-black transition-colors hover:bg-white">
+              <button className={buttonVariants({ variant: "success", size: "app" })}>
                 {t("admin.application-detail.actions.accept")}
               </button>
             </form>
@@ -195,11 +207,11 @@ export default async function AdminApplicationDetailPage({
                   name="note"
                   required
                   rows={5}
-                  className="ui-input-surface mt-2 min-h-24 resize-none border-white bg-transparent px-5 py-4 text-base hover:bg-transparent md:text-base"
+                  className="ui-input-surface mt-2 min-h-24 resize-none border-white bg-transparent px-5 py-4 font-body text-base font-normal placeholder:font-normal hover:bg-transparent md:text-base"
                   placeholder={t("admin.application-detail.actions.reject-note-placeholder")}
                 />
               </label>
-              <button className="rounded-xl bg-rejection px-6 py-3 font-body text-sm text-white transition-colors hover:bg-white hover:text-black">
+              <button className={buttonVariants({ size: "app" })}>
                 {t("admin.application-detail.actions.reject-with-note")}
               </button>
             </form>
@@ -215,11 +227,11 @@ export default async function AdminApplicationDetailPage({
                 <Textarea
                   name="note"
                   rows={4}
-                  className="ui-input-surface mt-2 min-h-20 resize-none border-white bg-transparent px-5 py-4 text-base hover:bg-transparent md:text-base"
+                  className="ui-input-surface mt-2 min-h-20 resize-none border-white bg-transparent px-5 py-4 font-body text-base font-normal placeholder:font-normal hover:bg-transparent md:text-base"
                   placeholder={t("admin.application-detail.actions.permanent-rejection-note-placeholder")}
                 />
               </label>
-              <button className="rounded-xl bg-rejection px-6 py-3 font-body text-sm text-white transition-colors hover:bg-white hover:text-black">
+              <button className={buttonVariants({ size: "app" })}>
                 {t("admin.application-detail.actions.reject-permanently")}
               </button>
             </form>
@@ -235,7 +247,12 @@ export default async function AdminApplicationDetailPage({
                 name="shipped"
                 value={application.tshirt_shipped ? "false" : "true"}
               />
-              <button className="rounded-xl bg-secondary px-6 py-3 font-body text-sm text-black transition-colors hover:bg-white">
+              <button
+                className={buttonVariants({
+                  variant: application.tshirt_shipped ? "default" : "success",
+                  size: "app",
+                })}
+              >
                 {application.tshirt_shipped
                   ? t("admin.application-detail.actions.mark-tshirt-unshipped")
                   : t("admin.application-detail.actions.mark-tshirt-shipped")}
@@ -355,6 +372,11 @@ export default async function AdminApplicationDetailPage({
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.hca-postal-code")} value={application.hca_postal_code} />
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.hca-country")} value={application.hca_country} />
         <DetailFieldRow
+          label={t("admin.application-detail.applicant-fields.hca-addresses")}
+          value={addresses.length > 0 ? addresses.map(formatAddress).join("\n\n") : null}
+          multiline
+        />
+        <DetailFieldRow
           label={t("admin.application-detail.applicant-fields.user-location")}
           value={joinNonEmpty(
             application.user_city,
@@ -391,8 +413,12 @@ export default async function AdminApplicationDetailPage({
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <StatusBadge status={entry.status} />
-                      {entry.id === application.latest_application_id && (
-                        <span className="rounded-lg bg-acceptance px-3 py-1 text-sm text-black">{t("common.latest")}</span>
+                      {entry.id === application.latest_application_id ? (
+                        <span className={pillVariants({ tone: "green" })}>{t("common.latest")}</span>
+                      ) : (
+                        <span className={pillVariants({ tone: "black" })}>
+                          {t("admin.applications-list.history")}
+                        </span>
                       )}
                     </div>
                   </td>
@@ -400,9 +426,10 @@ export default async function AdminApplicationDetailPage({
                   <td className="px-4 py-4">
                     <Link
                       href={`/admin/applications/${entry.id}`}
-                      className="inline-flex rounded-xl border border-secondary px-3 py-1.5 font-body text-sm text-secondary transition-colors hover:border-white hover:text-white"
+                      aria-label={t("admin.application-detail.history.view")}
+                      className="ui-open-link inline-flex font-body text-lg leading-none"
                     >
-                      {t("admin.application-detail.history.view")}
+                      <span aria-hidden="true">↗</span>
                     </Link>
                   </td>
                 </tr>
@@ -414,7 +441,7 @@ export default async function AdminApplicationDetailPage({
 
       <DetailSection
         title={t("admin.application-detail.sections.visits.title")}
-        description={t("admin.application-detail.sections.visits.description")}
+        description={t("admin.application-detail.sections.visits.description", { duration: "10 minutes" })}
       >
         <div className="space-y-4">
           {visits.length > 0 ? (
@@ -466,6 +493,21 @@ export default async function AdminApplicationDetailPage({
       </DetailSection>
     </div>
   );
+}
+
+function formatAddress(address: Record<string, unknown>) {
+  return [
+    typeof address.line_1 === "string" ? address.line_1 : null,
+    typeof address.line_2 === "string" ? address.line_2 : null,
+    joinNonEmpty(
+      typeof address.city === "string" ? address.city : null,
+      typeof address.state === "string" ? address.state : null,
+      typeof address.postal_code === "string" ? address.postal_code : null,
+      typeof address.country === "string" ? address.country : null,
+    ),
+  ]
+    .filter((part): part is string => !!part)
+    .join("\n");
 }
 
 function TextAnswer({ label, value }: { label: string; value: string | null | undefined }) {

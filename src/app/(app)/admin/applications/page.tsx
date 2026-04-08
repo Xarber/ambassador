@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { SlackAvatar } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { pillVariants } from "@/components/ui/pill";
 import sql from "@/lib/db";
 import { ensureSchema } from "@/lib/ensure-schema";
 
@@ -72,11 +73,11 @@ export default async function AdminApplicationsPage() {
                   <div className="flex items-center gap-2">
                     <StatusBadge status={application.status} />
                     {application.is_latest ? (
-                      <span className="rounded-lg bg-acceptance px-2 py-1 text-xs text-black">
+                      <span className={pillVariants({ tone: "green" })}>
                         {t("admin.applications-list.latest")}
                       </span>
                     ) : (
-                      <span className="rounded-lg bg-foreground px-2 py-1 text-xs text-background">
+                      <span className={pillVariants({ tone: "black" })}>
                         {t("admin.applications-list.history")}
                       </span>
                     )}
@@ -95,9 +96,10 @@ export default async function AdminApplicationsPage() {
                 <td className="px-5 py-4">
                   <Link
                     href={`/admin/applications/${application.id}`}
-                    className="inline-flex rounded-xl bg-secondary px-3 py-1.5 font-body text-sm text-black transition-opacity hover:opacity-80"
+                    aria-label={t("admin.applications-list.view-details")}
+                    className="ui-open-link inline-flex font-body text-lg leading-none"
                   >
-                    {t("admin.applications-list.view-details")}
+                    <span aria-hidden="true">↗</span>
                   </Link>
                 </td>
               </tr>

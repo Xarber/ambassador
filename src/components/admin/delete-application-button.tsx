@@ -1,5 +1,7 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
+
 export function DeleteApplicationButton({
   applicationId,
   label,
@@ -21,7 +23,7 @@ export function DeleteApplicationButton({
       onSubmit={handleSubmit}
     >
       <input type="hidden" name="redirectTo" value="/admin/applications" />
-      <button className="rounded-xl border border-rejection px-6 py-3 font-body text-sm text-rejection transition-colors hover:bg-rejection hover:text-white">
+      <button className={buttonVariants({ size: "app" })}>
         {label}
       </button>
     </form>

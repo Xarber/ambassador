@@ -85,9 +85,10 @@ export default async function AdminUsersPage() {
                 <td className="px-5 py-4">
                   <Link
                     href={`/admin/users/${user.id}`}
-                    className="inline-flex rounded-xl bg-secondary px-3 py-1.5 font-body text-sm text-black transition-opacity hover:opacity-80"
+                    aria-label={t("admin.users-list.view-user")}
+                    className="ui-open-link inline-flex font-body text-lg leading-none"
                   >
-                    {t("admin.users-list.view-user")}
+                    <span aria-hidden="true">↗</span>
                   </Link>
                 </td>
               </tr>
