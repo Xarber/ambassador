@@ -23,8 +23,8 @@
   --accent: #ffbf71;
   --accent-foreground: #000;
   --destructive: #ec3750;
-  --acceptance: #64ff96;
-  --acceptance-foreground: #000;
+  --acceptance: #16a34a;
+  --acceptance-foreground: #fff;
   --rejection: #d84f4f;
   --rejection-foreground: #fff;
   --border: color-mix(in srgb, var(--foreground) 10%, var(--background));
@@ -179,6 +179,16 @@ a {
   .ui-input-surface {
     @apply border-foreground/15 bg-background text-foreground placeholder:text-muted-foreground hover:bg-muted;
   }
+
+  .ui-open-link {
+    color: var(--foreground) !important;
+    transition: color 150ms ease, opacity 150ms ease;
+  }
+
+  .ui-open-link:hover,
+  .ui-open-link:focus-visible {
+    color: var(--acceptance) !important;
+  }
 }
 
 @layer utilities {
@@ -280,14 +290,34 @@ a {
   }
 
   .bg-primary.text-white,
+  .bg-acceptance.text-white,
   .bg-rejection.text-white,
   .bg-primary .text-white,
+  .bg-acceptance .text-white,
   .bg-rejection .text-white {
     color: #fff !important;
   }
 
   :is(
-    button:not(:disabled),
+    button:not([data-slot^="select-"]),
+    [data-slot="button"],
+    a[data-slot="button"],
+    a.inline-flex.rounded-xl
+  ) {
+    color: #fff !important;
+  }
+
+  :is(
+    button:not(:disabled, [data-slot^="select-"]),
+    [data-slot="button"]:not(:disabled),
+    a[data-slot="button"],
+    a.inline-flex.rounded-xl
+  ) {
+    cursor: pointer;
+  }
+
+  :is(
+    button:not(:disabled, [data-slot^="select-"]),
     [data-slot="button"]:not(:disabled),
     a[data-slot="button"],
     a.inline-flex.rounded-xl
@@ -295,10 +325,11 @@ a {
     background-color: #000 !important;
     border-color: #000 !important;
     color: #fff !important;
+    opacity: 1 !important;
   }
 
   :is(
-      button:not(:disabled),
+      button:not(:disabled, [data-slot^="select-"]),
       [data-slot="button"]:not(:disabled),
       a[data-slot="button"],
       a.inline-flex.rounded-xl

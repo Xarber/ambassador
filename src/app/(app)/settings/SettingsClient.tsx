@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -51,14 +52,14 @@ export default function SettingsClient({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const surfaceClass = cn(
-    "ui-input-surface h-14 w-full rounded-lg border-0 px-4 text-base focus-visible:ring-1 focus-visible:ring-white/15",
+    "ui-input-surface h-14 w-full !rounded-none [border-radius:0!important] border-0 px-4 text-base focus-visible:ring-1 focus-visible:ring-white/15",
     "disabled:cursor-not-allowed disabled:text-white/50",
   );
   const readOnlySurfaceClass = cn(
     surfaceClass,
     "text-foreground disabled:opacity-100 disabled:text-foreground disabled:[-webkit-text-fill-color:var(--foreground)]",
   );
-  const selectContentClass = "border-white/10 bg-black text-white !duration-0 !data-open:animate-none !data-closed:animate-none !data-[side=bottom]:translate-y-0 !data-[side=top]:translate-y-0 !data-[side=left]:translate-x-0 !data-[side=right]:translate-x-0";
+  const selectContentClass = "!rounded-none [border-radius:0!important] border-white/10 bg-black text-white !duration-0 !data-open:animate-none !data-closed:animate-none !data-[side=bottom]:translate-y-0 !data-[side=top]:translate-y-0 !data-[side=left]:translate-x-0 !data-[side=right]:translate-x-0";
 
   const handleSave = async () => {
     setSaving(true);
@@ -207,7 +208,7 @@ export default function SettingsClient({
               <SelectContent
                 position="popper"
                 side="bottom"
-                sideOffset={6}
+                sideOffset={0}
                 avoidCollisions={false}
                 className={selectContentClass}
               >
@@ -242,7 +243,7 @@ export default function SettingsClient({
           <SelectContent
             position="popper"
             side="top"
-            sideOffset={6}
+            sideOffset={0}
             avoidCollisions={false}
             className={cn("max-h-72", selectContentClass)}
           >
@@ -268,7 +269,7 @@ export default function SettingsClient({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-xl bg-primary px-8 py-3 text-lg tracking-wide text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+          className={buttonVariants({ size: "app" })}
         >
           {saving ? t("actions.saving") : saved ? t("actions.saved") : t("actions.save")}
         </button>
