@@ -1,26 +1,26 @@
 import Icon from "@hackclub/icons";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import type { ComponentProps, ReactNode } from "react";
+import { useId, type ComponentProps, type ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { DevAdminSelector } from "@/components/dev-admin-selector";
 import { Navbar } from "@/components/navbar";
 import { buttonVariants } from "@/components/ui/button";
+import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import {
   APPLICATION_STATUS_PENDING_AUTOMATIC_CHECKS,
   isAcceptedApplicationStatus,
   isPendingApplicationStatus,
   isRejectedApplicationStatus,
   isRejectedPermanentlyApplicationStatus,
-} from "@/lib/applications";
-import sql from "@/lib/db";
-import { ensureSchema } from "@/lib/ensure-schema";
+} from "@/lib/applications/status";
+import sql from "@/lib/database/client";
+import { canShowDevAdminSelector, isDevelopmentEnvironment, isDevState, type DevState } from "@/lib/dev-admin-selector";
+import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getSession } from "@/lib/session";
 import { resolveAmbassadorRegion } from "@/lib/settings";
 import { cn } from "@/lib/utils";
-import { DevStateSwitcher } from "./DevStateSwitcher";
-
-const isDev = process.env.NODE_ENV === "development";
 
 type DashboardTranslations = (key: string, values?: Record<string, number | string>) => string;
 type IconGlyph = NonNullable<ComponentProps<typeof Icon>["glyph"]>;
@@ -43,14 +43,14 @@ const toneBg: Record<Tone, string> = {
 
 const STEP_ORDER: StepKey[] = ["apply", "verify", "review", "decision"];
 
-export const metadata: Metadata = {
-  title: "Ambassadors // Dashboard",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return getTranslatedPageMetadata("dashboard.metadata.title");
+}
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ devState?: string }>;
+  searchParams: Promise<{ devState?: DevState | string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/");
@@ -73,10 +73,8 @@ export default async function DashboardPage({
   ]);
 
   const fakeDate = new Date().toISOString();
-  const activeDevState = isDev ? (devState ?? "apply") : null;
-
-  const resolved = resolveState({
-    activeDevState,
+  const baseResolved = resolveState({
+    activeDevState: null,
     application: application as { status: string; created_at: string } | undefined,
     user: user as
       | { ambassador_region?: string | null; country_name?: string | null }
@@ -85,6 +83,21 @@ export default async function DashboardPage({
     fakeDate,
     t,
   });
+  const selectedDevState = normalizeDevState(devState);
+  const resolved = isDevelopmentEnvironment && selectedDevState
+    ? resolveState({
+        activeDevState: selectedDevState,
+        application: application as { status: string; created_at: string } | undefined,
+        user: user as
+          | { ambassador_region?: string | null; country_name?: string | null }
+          | undefined,
+        locale,
+        fakeDate,
+        t,
+      })
+    : baseResolved;
+  const canUseSelector = canShowDevAdminSelector(Boolean(user?.is_admin ?? session.isAdmin));
+  const devSwitcherCurrent = selectedDevState ?? baseResolved.devState;
   const showAmbassadorRing = resolved.decision === "approved";
 
   return (
@@ -108,7 +121,7 @@ export default async function DashboardPage({
 
         <div className="mt-8">{resolved.node}</div>
       </div>
-      {isDev && <DevStateSwitcher current={activeDevState ?? "apply"} />}
+      {canUseSelector && <DevAdminSelector current={devSwitcherCurrent} />}
     </main>
   );
 }
@@ -121,24 +134,40 @@ function resolveState({
   fakeDate,
   t,
 }: {
-  activeDevState: string | null;
+  activeDevState: DevState | null;
   application: { status: string; created_at: string } | undefined;
   user: { ambassador_region?: string | null; country_name?: string | null } | undefined;
   locale: string;
   fakeDate: string;
   t: DashboardTranslations;
-}): { node: ReactNode; activeStep: StepKey | null; decision: Decision } {
-  const ineligible = { node: <IneligibleRegion t={t} />, activeStep: "apply" as const, decision: null };
-  const apply = { node: <NoApplication t={t} />, activeStep: "apply" as const, decision: null };
-  const verify = { node: <PendingAutomaticChecksApplication t={t} />, activeStep: "verify" as const, decision: null };
+}): { node: ReactNode; activeStep: StepKey | null; decision: Decision; devState: DevState } {
+  const ineligible = { node: <IneligibleRegion t={t} />, activeStep: "apply" as const, decision: null, devState: "ineligible" as const };
+  const apply = { node: <NoApplication t={t} />, activeStep: "apply" as const, decision: null, devState: "apply" as const };
+  const verify = {
+    node: <PendingAutomaticChecksApplication t={t} />,
+    activeStep: "verify" as const,
+    decision: null,
+    devState: "pending-checks" as const,
+  };
   const pending = (createdAt: string) => ({
     node: <PendingApplication createdAt={createdAt} dateFormatLocale={locale} t={t} />,
     activeStep: "review" as const,
     decision: null,
+    devState: "pending" as const,
   });
-  const approved = { node: <ApprovedApplication t={t} />, activeStep: "decision" as const, decision: "approved" as const };
-  const rejected = { node: <RejectedApplication t={t} />, activeStep: "apply" as const, decision: null };
-  const banned = { node: <RejectedPermanentlyApplication t={t} />, activeStep: "decision" as const, decision: "banned" as const };
+  const approved = {
+    node: <ApprovedApplication t={t} />,
+    activeStep: "decision" as const,
+    decision: "approved" as const,
+    devState: "approved" as const,
+  };
+  const rejected = { node: <RejectedApplication t={t} />, activeStep: "apply" as const, decision: null, devState: "rejected" as const };
+  const banned = {
+    node: <RejectedPermanentlyApplication t={t} />,
+    activeStep: "decision" as const,
+    decision: "banned" as const,
+    devState: "banned" as const,
+  };
 
   if (activeDevState === "ineligible") return ineligible;
   if (activeDevState === "pending-checks") return verify;
@@ -160,7 +189,12 @@ function resolveState({
   if (isAcceptedApplicationStatus(application.status)) return approved;
   if (isRejectedApplicationStatus(application.status)) return rejected;
   if (isRejectedPermanentlyApplicationStatus(application.status)) return banned;
-  return { node: null, activeStep: null, decision: null };
+  return { node: null, activeStep: null, decision: null, devState: "apply" };
+}
+
+function normalizeDevState(value: string | DevState | undefined): DevState | null {
+  if (!value) return null;
+  return isDevState(value) ? value : null;
 }
 
 function JourneyStepper({
@@ -214,11 +248,11 @@ function JourneyStepper({
             <li key={key} className="flex min-w-10 flex-col items-center gap-2">
               <span
                 className={cn(
-                  "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold",
+                  "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold leading-none",
                   circleClass,
                 )}
               >
-                {isComplete ? <Icon glyph="checkmark" size={20} /> : i + 1}
+                <StepperSymbol isComplete={isComplete} stepNumber={i + 1} />
               </span>
               <span className={cn("text-center text-xs", labelClass)}>
                 {t(`dashboard.stepper.${key}`)}
@@ -229,6 +263,19 @@ function JourneyStepper({
       </ol>
     </div>
   );
+}
+
+function StepperSymbol({ isComplete, stepNumber }: { isComplete: boolean; stepNumber: number }) {
+  if (isComplete) {
+    return (
+      <span
+        aria-hidden
+        className="block h-3 w-2 -translate-y-px rotate-45 border-b-2 border-r-2 border-current"
+      />
+    );
+  }
+
+  return <>{stepNumber}</>;
 }
 
 type StatusCardProps = {
@@ -394,35 +441,28 @@ function RejectedPermanentlyApplication({ t }: { t: DashboardTranslations }) {
 }
 
 function AmbassadorCircleText({ className }: { className?: string }) {
-  const ringText = "Ambassadors • Ambassadors •";
-  const chars = [...ringText];
-  const radiusPct = 42;
+  const textPathId = useId();
+  const ringText = "Ambassador • Ambassador • ";
+  const ringCircumference = 2 * Math.PI * 40;
 
   return (
     <div className={cn("inline-flex items-center justify-center", className)} aria-label="Ambassadors">
       <span className="sr-only">Ambassadors</span>
-      <div aria-hidden className="relative h-full w-full">
-        {chars.map((char, index) => {
-          const angle = (index / chars.length) * 360 - 90;
-          const radians = (angle * Math.PI) / 180;
-          const left = 50 + radiusPct * Math.cos(radians);
-          const top = 50 + radiusPct * Math.sin(radians);
-
-          return (
-            <span
-              key={`${char}-${index}`}
-              className="absolute text-[11px] leading-none font-bold text-foreground"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-                transform: `translate(-50%, -50%) rotate(${angle + 90}deg)`,
-              }}
-            >
-              {char}
-            </span>
-          );
-        })}
-      </div>
+      <svg aria-hidden viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+        <defs>
+          <path id={textPathId} d="M 50,50 m 0,-40 a 40,40 0 1,1 0,80 a 40,40 0 1,1 0,-80" />
+        </defs>
+        <text fill="currentColor" xmlSpace="preserve" className="text-[17px] font-bold text-foreground">
+          <textPath
+            href={`#${textPathId}`}
+            startOffset="0%"
+            textLength={ringCircumference}
+            lengthAdjust="spacing"
+          >
+            {ringText}
+          </textPath>
+        </text>
+      </svg>
     </div>
   );
 }
