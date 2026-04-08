@@ -5,12 +5,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { SlackAvatar } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { pillVariants } from "@/components/ui/pill";
-import sql from "@/lib/db";
-import { ensureSchema } from "@/lib/ensure-schema";
+import { getTranslatedPageMetadata } from "@/i18n/metadata";
+import sql from "@/lib/database/client";
+import { ensureSchema } from "@/lib/database/ensure-schema";
 
-export const metadata: Metadata = {
-  title: "Admin // Applications",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return getTranslatedPageMetadata("admin.applications-list.metadata.title");
+}
 
 export default async function AdminApplicationsPage() {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { getTranslatedPageMetadata } from "@/i18n/metadata";
 
-export const metadata: Metadata = {
-  title: "Admin // Orders",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return getTranslatedPageMetadata("admin.orders.metadata.title");
+}
 
 export default async function AdminOrdersPage() {
   const t = await getTranslations();

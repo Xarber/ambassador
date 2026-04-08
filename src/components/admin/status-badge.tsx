@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import {
   getApplicationStatusMeta,
   normalizeApplicationStatus,
-} from "@/lib/applications";
+} from "@/lib/applications/status";
 import { pillVariants } from "@/components/ui/pill";
 
 export async function StatusBadge({ status }: { status: string | null | undefined }) {
