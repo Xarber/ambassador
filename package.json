@@ -19,6 +19,7 @@
     "dev:sync-once": "node scripts/dev-airtable-sync-loop.mjs --once"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1026.0",
     "@hackclub/icons": "^0.2.1",
     "@tailwindcss/postcss": "^4.2.2",
     "class-variance-authority": "^0.7.1",

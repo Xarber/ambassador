@@ -44,6 +44,7 @@ next-env.d.ts
 
 # local stuff
 ref
+lfs
 
 # ignore anyway
 AGENTS.md

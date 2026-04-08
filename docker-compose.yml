@@ -10,5 +10,49 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  qreader:
+    build:
+      context: .
+      dockerfile: Dockerfile.qreader
+    ports:
+      - "4445:4445"
+    environment:
+      PORT: "4445"
+      ADMIN_KEY: ${QREADER_ADMIN_KEY:-}
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "7171:7171"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://ambassador:ambassador@postgres:5432/ambassador_dev
+      QREADER_URL: http://qreader:4445
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      LFS_ROOT: /app/lfs
+      CURRENT_DOMAIN: ${CURRENT_DOMAIN:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      HCA_CLIENT_ID: ${HCA_CLIENT_ID:-}
+      HCA_CLIENT_SECRET: ${HCA_CLIENT_SECRET:-}
+      HCA_ISSUER: ${HCA_ISSUER:-}
+      AIRTABLE_PAT: ${AIRTABLE_PAT:-}
+      WAREHOUSE_API: ${WAREHOUSE_API:-}
+      GEOCODER_KEY: ${GEOCODER_KEY:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+    depends_on:
+      - postgres
+      - qreader
+    volumes:
+      - lfs:/app/lfs
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  lfs:
