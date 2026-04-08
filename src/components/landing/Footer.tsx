@@ -23,7 +23,7 @@ export default function Footer() {
         <h2 className="text-5xl font-jersey">{t("footer.cta")}</h2>
         <Link
           href="/apply"
-          className="mt-6 flex items-center max-w-fit h-36 px-20 rounded-full hover:bg-rose-700 transition hover:scale-105 bg-primary corner-squircle"
+          className="mt-6 flex items-center max-w-fit mx-auto h-36 px-20 rounded-full hover:bg-rose-700 transition hover:scale-105 bg-primary corner-squircle"
         >
           <span className="font-jersey text-7xl uppercase">{t("apply")}</span>
         </Link>
