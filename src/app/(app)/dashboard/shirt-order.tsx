@@ -327,6 +327,12 @@ function ShirtOrderBody({
                 </SelectContent>
               </Select>
             )}
+            <div className="mt-1 text-right">
+              <ExternalArrowLink
+                href="https://auth.hackclub.com/addresses"
+                label={t("manage-addresses")}
+              />
+            </div>
           </div>
 
           {error ? <p className="font-body text-base text-primary">{error}</p> : null}
@@ -518,5 +524,18 @@ function RefreshAddressButton({
     >
       <Icon glyph="view-reload" size={18} />
     </button>
+  );
+}
+
+function ExternalArrowLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center !text-primary !underline hover:!opacity-80"
+    >
+      <span>{label} ↗</span>
+    </a>
   );
 }
