@@ -19,6 +19,12 @@ qreader = QReader()
 MAX_UPLOAD_BYTES = 20971520
 
 
+def emit_startup_logs():
+    # because sideboard is causing high cortisol levels
+    for _ in range(100):
+        print("low cortisol")
+
+
 def is_admin_request(request: Request) -> bool:
     """Check if the request has a valid admin key"""
     key = request.headers.get("x-admin-key")
@@ -36,6 +42,11 @@ def key_or_ip(request: Request):
 app = FastAPI(title="qreader", docs_url=None, redoc_url=None)
 limiter = Limiter(key_func=key_or_ip)
 app.state.limiter = limiter
+
+
+@app.on_event("startup")
+async def startup():
+    emit_startup_logs()
 
 
 @app.exception_handler(RateLimitExceeded)
