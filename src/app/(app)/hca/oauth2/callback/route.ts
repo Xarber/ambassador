@@ -7,13 +7,14 @@ import {
 } from "@/lib/auth-intents";
 import {
   exchangeCodeForToken,
+  OAUTH_REDIRECT_COOKIE_NAME,
   fetchUserInfo,
   OAUTH_STATE_COOKIE_NAME,
 } from "@/lib/auth";
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { fetchGeo, geocodeIp, linkAnonymousVisits } from "@/lib/geo";
-import { getRequestIp } from "@/lib/http";
+import { getRequestIp, getSafeRedirectPath } from "@/lib/http";
 import { createToken, setSession } from "@/lib/session";
 import { normalizeHackClubAddresses, resolveAmbassadorRegion } from "@/lib/settings";
 
@@ -23,9 +24,14 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(OAUTH_STATE_COOKIE_NAME)?.value;
+  const nextPath = getSafeRedirectPath(
+    cookieStore.get(OAUTH_REDIRECT_COOKIE_NAME)?.value,
+    "/dashboard",
+  );
   const authIntentId = cookieStore.get(AUTH_INTENT_COOKIE_NAME)?.value;
 
   cookieStore.delete(OAUTH_STATE_COOKIE_NAME);
+  cookieStore.delete(OAUTH_REDIRECT_COOKIE_NAME);
 
   if (!state || !expectedState || state !== expectedState) {
     cookieStore.delete(AUTH_INTENT_COOKIE_NAME);
@@ -222,5 +228,5 @@ export async function GET(request: Request) {
 
   await setSession(token);
 
-  return Response.redirect(`${process.env.CURRENT_DOMAIN}/dashboard`);
+  return Response.redirect(`${process.env.CURRENT_DOMAIN}${nextPath}`);
 }

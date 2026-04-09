@@ -185,7 +185,7 @@ shirt:
     failed-body: We couldn't send this order through. You can place a new shirt order below.
     cancelled-title: Order cancelled
     cancelled-body: This order was cancelled. You can place a new shirt order below.
-    retryable-warning: "Your last order failed because: {reason} but you can order again!"
+    retryable-warning: "Your last order was rejected because: \"{reason}\" but you can order again!"
     no-reason: No reason provided
     track-cta: Track on mail.hackclub.com
     public-cta: Open public order page

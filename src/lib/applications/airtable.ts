@@ -61,6 +61,8 @@ const applicationFieldCandidates = {
   idvStatus: ["idv_status", "IDV Status", "idv status"],
 } as const;
 
+type ApplicationFieldKey = keyof typeof applicationFieldCandidates;
+
 function getAirtableApplicationsClient() {
   const token = process.env.AIRTABLE_PAT?.trim();
 
@@ -85,7 +87,7 @@ function normalizeFieldName(value: string) {
 
 export function resolveApplicationFieldName(
   fields: Record<string, unknown>,
-  key: keyof typeof applicationFieldCandidates,
+  key: ApplicationFieldKey,
 ) {
   const availableFieldNames = Object.keys(fields);
   const normalizedFieldNames = new Map(
@@ -101,6 +103,13 @@ export function resolveApplicationFieldName(
   }
 
   return null;
+}
+
+function resolveWritableApplicationFieldName(
+  fields: Record<string, unknown>,
+  key: ApplicationFieldKey,
+) {
+  return resolveApplicationFieldName(fields, key) ?? applicationFieldCandidates[key][0];
 }
 
 async function getRecordById(
@@ -153,8 +162,8 @@ function buildReviewFields(
   record: AirtableApplicationRecord,
   input: ApplicationReviewSyncInput,
 ) {
-  const statusFieldName = resolveApplicationFieldName(record.fields, "status");
-  const rejectionReasonFieldName = resolveApplicationFieldName(
+  const statusFieldName = resolveWritableApplicationFieldName(record.fields, "status");
+  const rejectionReasonFieldName = resolveWritableApplicationFieldName(
     record.fields,
     "rejectionReason",
   );
@@ -210,7 +219,7 @@ export async function syncApplicationTshirtShippedToAirtable(input: TShirtSyncIn
     throw new Error(`Unable to find Airtable application record ${recordId}`);
   }
 
-  const tshirtShippedFieldName = resolveApplicationFieldName(
+  const tshirtShippedFieldName = resolveWritableApplicationFieldName(
     record.fields,
     "tshirtShipped",
   );

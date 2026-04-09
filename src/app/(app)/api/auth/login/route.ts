@@ -8,17 +8,27 @@ import {
 } from "@/lib/auth-intents";
 import {
   getAuthorizationUrl,
+  OAUTH_REDIRECT_COOKIE_NAME,
   OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
   OAUTH_STATE_COOKIE_NAME,
 } from "@/lib/auth";
+import { getSafeRedirectPath } from "@/lib/http";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const submittedEmail = url.searchParams.get("email");
+  const nextPath = getSafeRedirectPath(url.searchParams.get("next"), "/dashboard");
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
 
   cookieStore.set(OAUTH_STATE_COOKIE_NAME, state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
+  });
+  cookieStore.set(OAUTH_REDIRECT_COOKIE_NAME, nextPath, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

@@ -209,7 +209,11 @@ export default async function DashboardPage({
             {t("dashboard.heading", { name: session.displayName })}
           </h1>
           {showAmbassadorRing ? (
-            <AmbassadorCircleText className="h-14 w-14 shrink-0 md:h-16 md:w-16" />
+            <AmbassadorCircleText
+              className="h-14 w-14 shrink-0 md:h-16 md:w-16"
+              slackId={session.slackId}
+              fallbackName={session.displayName}
+            />
           ) : null}
         </header>
 
@@ -563,13 +567,25 @@ function RejectedPermanentlyApplication({ t }: { t: DashboardTranslations }) {
   );
 }
 
-function AmbassadorCircleText({ className }: { className?: string }) {
+function AmbassadorCircleText({
+  className,
+  slackId,
+  fallbackName,
+}: {
+  className?: string;
+  slackId?: string;
+  fallbackName?: string;
+}) {
   const textPathId = useId();
   const ringText = "Ambassador • Ambassador • ";
   const ringCircumference = 2 * Math.PI * 40;
+  const initial = fallbackName?.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <div className={cn("inline-flex items-center justify-center", className)} aria-label="Ambassadors">
+    <div
+      className={cn("relative inline-flex items-center justify-center", className)}
+      aria-label="Ambassadors"
+    >
       <span className="sr-only">Ambassadors</span>
       <svg aria-hidden viewBox="0 0 100 100" className="h-full w-full overflow-visible">
         <defs>
@@ -586,6 +602,19 @@ function AmbassadorCircleText({ className }: { className?: string }) {
           </textPath>
         </text>
       </svg>
+      <div className="absolute top-1/2 left-1/2 aspect-square w-[64%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full">
+        {slackId ? (
+          <div
+            aria-hidden
+            className="h-full w-full rounded-full bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: `url("https://cachet.dunkirk.sh/users/${slackId}/r")` }}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center rounded-full bg-white font-body text-sm text-black">
+            {initial}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

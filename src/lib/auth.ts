@@ -4,6 +4,7 @@ import { requireEnv } from "@/lib/env";
 const callbackUrl = `${requireEnv("CURRENT_DOMAIN")}/hca/oauth2/callback`;
 export const OAUTH_STATE_COOKIE_NAME = "ambassador_oauth_state";
 export const OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 600;
+export const OAUTH_REDIRECT_COOKIE_NAME = "ambassador_oauth_next";
 
 export function getAuthorizationUrl(state: string, loginHint?: string) {
   const params = new URLSearchParams({

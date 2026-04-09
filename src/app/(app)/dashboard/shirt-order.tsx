@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Icon from "@hackclub/icons";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -47,18 +49,70 @@ export default function ShirtOrderSection(props: ShirtOrderSectionProps) {
     props.existingOrder && canPlaceAnotherShirtOrder(props.existingOrder.status)
       ? props.existingOrder.note?.trim() || t("order.no-reason")
       : null;
+  const retryableWarning = retryableReason
+    ? t("order.retryable-warning", { reason: retryableReason })
+    : null;
+  const retryableWarningParts = retryableWarning?.split(/(rejected)/i);
   return (
     <section>
       <h2 className="font-sub text-2xl text-white md:text-3xl">{t("heading")}</h2>
-      {retryableReason ? (
-        <p className="mt-2 text-base text-muted-foreground">
-          <span className="text-rejection">
-            {t("order.retryable-warning", { reason: retryableReason })}
-          </span>
+      {retryableWarning ? (
+        <p className="mt-2 text-base text-black">
+          {retryableWarningParts?.map((part, index) =>
+            /^rejected$/i.test(part) ? (
+              <span key={`${part}-${index}`} className="text-rejection">
+                {part}
+              </span>
+            ) : (
+              <span key={`${part}-${index}`}>{part}</span>
+            ),
+          )}
         </p>
       ) : null}
       <ShirtOrderBody {...props} />
     </section>
+  );
+}
+
+function InlineAuthLink() {
+  return (
+    <a
+      href="https://auth.hackclub.com/addresses"
+      target="_blank"
+      rel="noreferrer"
+      className="!text-primary !underline hover:!opacity-80"
+    >
+      Hack Club Auth
+    </a>
+  );
+}
+
+function NoAddressMessage({
+  onRefresh,
+  refreshing,
+}: {
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  const t = useTranslations("shirt");
+  const body = t("no-address.body");
+  const linkLabel = "Hack Club Auth";
+  const [beforeLink, afterLink = ""] = body.split(linkLabel);
+
+  return (
+    <p className="font-body text-base text-white">
+      <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>
+          {beforeLink}
+          <InlineAuthLink />
+          {afterLink}
+        </span>
+        <RefreshAddressButton
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+        />
+      </span>
+    </p>
   );
 }
 
@@ -69,7 +123,10 @@ function ShirtOrderBody({
   existingOrder,
 }: ShirtOrderSectionProps) {
   const t = useTranslations("shirt");
+  const router = useRouter();
+  const refreshAddressesHref = "/api/auth/refresh?next=%2Fdashboard";
   useAddressRefreshRedirect(needsAddressRefresh);
+  useAddressReturnRefresh(addresses.length === 0 && !existingOrder);
   const [size, setSize] = useState<ShirtSize>(
     existingOrder?.size && SHIRT_SIZES.includes(existingOrder.size as ShirtSize)
       ? (existingOrder.size as ShirtSize)
@@ -79,7 +136,9 @@ function ShirtOrderBody({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<ShirtOrderState | null>(existingOrder);
+  const [refreshingAddresses, startRefreshTransition] = useTransition();
   const canPlaceOrder = !order || canPlaceAnotherShirtOrder(order.status);
+  const handleRefreshAddresses = () => startRefreshTransition(() => router.refresh());
 
   const surfaceClass = cn(
     "ui-input-surface h-14 w-full !rounded-none [border-radius:0!important] border-0 px-4 text-base focus-visible:ring-1 focus-visible:ring-white/15",
@@ -100,7 +159,7 @@ function ShirtOrderBody({
     return (
       <div className="mt-5 space-y-3">
         <p className="font-body text-base text-white">{t("refresh-addresses.body")}</p>
-        <a href="/api/auth/login" className={buttonVariants({ size: "app" })}>
+        <a href={refreshAddressesHref} className={buttonVariants({ size: "app" })}>
           {t("refresh-addresses.cta")}
         </a>
       </div>
@@ -109,11 +168,10 @@ function ShirtOrderBody({
 
   if (addresses.length === 0 && !order) {
     return (
-      <div className="mt-5 space-y-3">
-        <p className="font-body text-base text-white">{t("no-address.body")}</p>
-        <ExternalArrowLink
-          href="https://auth.hackclub.com/addresses"
-          label={t("no-address.cta")}
+      <div className="mt-5">
+        <NoAddressMessage
+          onRefresh={handleRefreshAddresses}
+          refreshing={refreshingAddresses}
         />
       </div>
     );
@@ -179,16 +237,15 @@ function ShirtOrderBody({
         needsAddressRefresh ? (
           <div className="space-y-4">
             <p className="font-body text-base text-white">{t("refresh-addresses.body")}</p>
-            <a href="/api/auth/login" className={buttonVariants({ size: "app" })}>
+            <a href={refreshAddressesHref} className={buttonVariants({ size: "app" })}>
               {t("refresh-addresses.cta")}
             </a>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="font-body text-base text-white">{t("no-address.body")}</p>
-            <ExternalArrowLink
-              href="https://auth.hackclub.com/addresses"
-              label={t("no-address.cta")}
+            <NoAddressMessage
+              onRefresh={handleRefreshAddresses}
+              refreshing={refreshingAddresses}
             />
           </div>
         )
@@ -222,9 +279,15 @@ function ShirtOrderBody({
           </div>
 
           <div>
-            <label className="mb-2 block font-body text-base tracking-wide text-white">
-              {t("labels.shipping-address")}
-            </label>
+            <div className="mb-2 flex items-center gap-2">
+              <label className="block font-body text-base tracking-wide text-white">
+                {t("labels.shipping-address")}
+              </label>
+              <RefreshAddressButton
+                onRefresh={handleRefreshAddresses}
+                refreshing={refreshingAddresses}
+              />
+            </div>
             {addresses.length === 1 ? (
               <Input
                 type="text"
@@ -264,12 +327,6 @@ function ShirtOrderBody({
                 </SelectContent>
               </Select>
             )}
-            <div className="mt-2 text-right">
-              <ExternalArrowLink
-                href="https://auth.hackclub.com/addresses"
-                label={t("manage-addresses")}
-              />
-            </div>
           </div>
 
           {error ? <p className="font-body text-base text-primary">{error}</p> : null}
@@ -304,8 +361,57 @@ function useAddressRefreshRedirect(needsAddressRefresh: boolean) {
     }
 
     window.sessionStorage.setItem(storageKey, "1");
-    window.location.assign("/api/auth/login");
+    window.location.assign("/api/auth/refresh?next=%2Fdashboard");
   }, [needsAddressRefresh]);
+}
+
+function useAddressReturnRefresh(enabled: boolean) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    let lastRefreshAt = 0;
+    const refreshThrottleMs = 1500;
+
+    const refresh = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastRefreshAt < refreshThrottleMs) {
+        return;
+      }
+
+      lastRefreshAt = now;
+      router.refresh();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        refresh();
+      }
+    };
+
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [enabled, router]);
 }
 
 function LatestOrderCard({ order }: { order: ShirtOrderState }) {
@@ -394,15 +500,23 @@ function LatestOrderCard({ order }: { order: ShirtOrderState }) {
   );
 }
 
-function ExternalArrowLink({ href, label }: { href: string; label: string }) {
+function RefreshAddressButton({
+  onRefresh,
+  refreshing,
+}: {
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center !text-primary !underline hover:!opacity-80"
+    <button
+      type="button"
+      data-slot="icon-link"
+      aria-label="Refresh addresses"
+      disabled={refreshing}
+      onClick={onRefresh}
+      className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center appearance-none border-0 bg-transparent p-0 text-foreground outline-none transition-colors hover:text-acceptance focus-visible:text-acceptance disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <span>{label} ↗</span>
-    </a>
+      <Icon glyph="view-reload" size={18} />
+    </button>
   );
 }
