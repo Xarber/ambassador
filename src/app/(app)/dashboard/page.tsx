@@ -17,7 +17,7 @@ import {
   isRejectedPermanentlyApplicationStatus,
 } from "@/lib/applications/status";
 import sql from "@/lib/database/client";
-import { canShowDevAdminSelector, isDevelopmentEnvironment, isDevState, type DevState } from "@/lib/dev-admin-selector";
+import { canShowDevAdminSelector, isDevState, type DevState } from "@/lib/dev-admin-selector";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getSession } from "@/lib/session";
 import {
@@ -177,15 +177,15 @@ export default async function DashboardPage({
     existingOrder: shirtExistingOrder,
   };
 
+  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user?.is_admin ?? session.isAdmin);
+  const canUseSelector = canShowDevAdminSelector(canAccessAdmin);
   const fakeDate = new Date().toISOString();
   const stateInput = { application, user, locale, fakeDate, t, shirt };
   const baseResolved = resolveState({ ...stateInput, activeDevState: null });
   const selectedDevState = devState && isDevState(devState) ? devState : null;
-  const resolved = isDevelopmentEnvironment && selectedDevState
+  const resolved = canUseSelector && selectedDevState
     ? resolveState({ ...stateInput, activeDevState: selectedDevState })
     : baseResolved;
-  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user?.is_admin ?? session.isAdmin);
-  const canUseSelector = canShowDevAdminSelector(canAccessAdmin);
   const devSwitcherCurrent = selectedDevState ?? baseResolved.devState;
   const showAmbassadorRing = resolved.decision === "approved";
 

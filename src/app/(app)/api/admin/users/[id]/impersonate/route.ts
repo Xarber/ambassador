@@ -4,8 +4,10 @@ import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getSafeRedirectUrl, isSameOriginRequest } from "@/lib/http";
 import {
   clearImpersonationSession,
+  createToken,
   createImpersonationToken,
   getActorSession,
+  setSession,
   setImpersonationSession,
   type TokenPayload,
 } from "@/lib/session";
@@ -28,11 +30,17 @@ export async function POST(
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const actor: TokenPayload = {
+    ...session,
+    isAdmin: true,
+  };
+
   const { id } = await params;
   const formData = await request.formData();
 
   if (id === session.sub) {
     await clearImpersonationSession();
+    await setSession(await createToken(actor));
     return Response.redirect(getSafeRedirectUrl(request, formData.get("redirectTo"), "/dashboard"));
   }
 
@@ -61,11 +69,12 @@ export async function POST(
     isAdmin: Boolean(user.is_admin),
   };
   const token = await createImpersonationToken({
-    actor: session,
+    actor,
     subject,
     startedAt: new Date().toISOString(),
   });
 
+  await setSession(await createToken(actor));
   await setImpersonationSession(token);
 
   return Response.redirect(getSafeRedirectUrl(request, formData.get("redirectTo"), "/dashboard"));
