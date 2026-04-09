@@ -18,6 +18,10 @@ type SyncApplicationsResult = {
   updated: number;
 };
 
+type SyncApplicationsOptions = {
+  signal?: AbortSignal;
+};
+
 type LinkApplicationsToUserInput = {
   email?: string | null;
   hcaId?: string | null;
@@ -34,6 +38,12 @@ function getRecordField(record: AirtableApplicationRecord, key: Parameters<typeo
   const fieldName = resolveApplicationFieldName(record.fields, key);
 
   return fieldName ? record.fields[fieldName] : null;
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return;
+
+  throw signal.reason instanceof Error ? signal.reason : new Error("Airtable sync was aborted");
 }
 
 function getStringField(
@@ -131,6 +141,8 @@ export async function linkApplicationsToUser(input: LinkApplicationsToUserInput)
   const slackId = input.slackId?.trim() || null;
   const email = input.email?.trim() || null;
   const hcaId = input.hcaId?.trim() || null;
+  const hasSlackId = slackId !== null;
+  const hasEmail = email !== null;
 
   if (!slackId && !email && !hcaId) return 0;
 
@@ -143,8 +155,8 @@ export async function linkApplicationsToUser(input: LinkApplicationsToUserInput)
         updated_at = NOW()
     WHERE (user_id IS NULL OR user_id = ${input.userId})
       AND (
-        (${slackId} IS NOT NULL AND applicant_slack_id = ${slackId})
-        OR (${email} IS NOT NULL AND LOWER(applicant_email) = LOWER(${email}))
+        (${hasSlackId} AND applicant_slack_id = ${slackId})
+        OR (${hasEmail} AND LOWER(applicant_email) = LOWER(${email}))
       )
     RETURNING id
   `;
@@ -165,8 +177,12 @@ export async function linkApplicationsToUser(input: LinkApplicationsToUserInput)
   return matchedApplications.length;
 }
 
-export async function syncAirtableApplicationsToPostgres(): Promise<SyncApplicationsResult> {
-  const records = await listAirtableApplicationRecords();
+export async function syncAirtableApplicationsToPostgres(
+  options: SyncApplicationsOptions = {},
+): Promise<SyncApplicationsResult> {
+  throwIfAborted(options.signal);
+
+  const records = await listAirtableApplicationRecords({ signal: options.signal });
   const result: SyncApplicationsResult = {
     inserted: 0,
     matchedUsers: 0,
@@ -179,7 +195,11 @@ export async function syncAirtableApplicationsToPostgres(): Promise<SyncApplicat
   const touchedUserIds = new Set<string>();
 
   for (const record of records) {
+    throwIfAborted(options.signal);
+
     const matchedUser = await findMatchedUser(record);
+    throwIfAborted(options.signal);
+
     const [existingApplication] = await sql<
       Array<{ id: string; user_id: string | null }>
     >`
@@ -188,6 +208,7 @@ export async function syncAirtableApplicationsToPostgres(): Promise<SyncApplicat
       WHERE airtable_record_id = ${record.id}
       LIMIT 1
     `;
+    throwIfAborted(options.signal);
 
     const status =
       normalizeApplicationStatus(getStringField(record, "status")) ||
@@ -245,6 +266,7 @@ export async function syncAirtableApplicationsToPostgres(): Promise<SyncApplicat
             updated_at = NOW()
         WHERE id = ${existingApplication.id}
       `;
+      throwIfAborted(options.signal);
 
       result.updated += 1;
       continue;
@@ -320,10 +342,12 @@ export async function syncAirtableApplicationsToPostgres(): Promise<SyncApplicat
         NOW()
       )
     `;
+    throwIfAborted(options.signal);
 
     result.inserted += 1;
   }
 
+  throwIfAborted(options.signal);
   await Promise.all(
     Array.from(touchedUserIds, (userId) => syncPermanentRejectionStateForUser(userId)),
   );

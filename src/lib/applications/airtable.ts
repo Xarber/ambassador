@@ -31,6 +31,10 @@ type TShirtSyncInput = {
   shipped: boolean;
 };
 
+type AirtableReadOptions = {
+  signal?: AbortSignal;
+};
+
 const DEFAULT_AIRTABLE_BASE_ID = "appwKApaCZvoa60hI";
 const DEFAULT_AIRTABLE_APPLICATIONS_TABLE_ID = "tblnA85coBmjWawcN";
 
@@ -107,11 +111,16 @@ export function resolveApplicationFieldName(
   return null;
 }
 
-async function getRecordById(client: AirtableClient, recordId: string) {
+async function getRecordById(
+  client: AirtableClient,
+  recordId: string,
+  options: AirtableReadOptions = {},
+) {
   try {
     return await client.getRecord<Record<string, unknown>>(
       getAirtableApplicationsTableId(),
       recordId,
+      options,
     );
   } catch (error) {
     if (error instanceof AirtableError && error.status === 404) {
@@ -122,7 +131,7 @@ async function getRecordById(client: AirtableClient, recordId: string) {
   }
 }
 
-export async function listAirtableApplicationRecords() {
+export async function listAirtableApplicationRecords(options: AirtableReadOptions = {}) {
   const client = getAirtableApplicationsClient();
 
   if (!client) return [];
@@ -138,6 +147,7 @@ export async function listAirtableApplicationRecords() {
         pageSize: 100,
         sort: [{ field: "id", direction: "asc" }],
       },
+      options,
     );
 
     records.push(...response.records);

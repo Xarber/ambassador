@@ -2,6 +2,10 @@ import { cookies } from "next/headers";
 
 import { linkApplicationsToUser } from "@/lib/applications/sync";
 import {
+  AUTH_INTENT_COOKIE_NAME,
+  markAuthLoginIntentCompleted,
+} from "@/lib/auth-intents";
+import {
   exchangeCodeForToken,
   fetchUserInfo,
   OAUTH_STATE_COOKIE_NAME,
@@ -19,14 +23,17 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(OAUTH_STATE_COOKIE_NAME)?.value;
+  const authIntentId = cookieStore.get(AUTH_INTENT_COOKIE_NAME)?.value;
 
   cookieStore.delete(OAUTH_STATE_COOKIE_NAME);
 
   if (!state || !expectedState || state !== expectedState) {
+    cookieStore.delete(AUTH_INTENT_COOKIE_NAME);
     return Response.redirect(`${process.env.CURRENT_DOMAIN}/?error=invalid_state`);
   }
 
   if (!code) {
+    cookieStore.delete(AUTH_INTENT_COOKIE_NAME);
     return Response.redirect(`${process.env.CURRENT_DOMAIN}/?error=no_code`);
   }
 
@@ -61,6 +68,13 @@ export async function GET(request: Request) {
   await ensureSchema();
   await ensureUserAddressSchema();
 
+  const existingUsers = await sql<{ id: string }[]>`
+    SELECT id
+    FROM users
+    WHERE hca_id = ${hcaId}
+    LIMIT 1
+  `;
+  const wasExistingUser = existingUsers.length > 0;
   const id = crypto.randomUUID();
 
   const [user] = await sql`
@@ -108,6 +122,24 @@ export async function GET(request: Request) {
       updated_at = NOW()
     RETURNING id, is_admin
   `;
+
+  if (authIntentId) {
+    try {
+      await markAuthLoginIntentCompleted({
+        intentId: authIntentId,
+        completedUserId: user.id,
+        completedHcaId: hcaId,
+        completedEmail: email ?? null,
+        wasExistingUser,
+      });
+    } catch (error) {
+      console.error("Failed to mark auth login intent complete", {
+        authIntentId,
+        error,
+      });
+    }
+    cookieStore.delete(AUTH_INTENT_COOKIE_NAME);
+  }
 
   await sql`
     INSERT INTO ip_visits (id, ip, user_id, visit_type)

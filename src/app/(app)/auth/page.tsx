@@ -46,7 +46,7 @@ export default async function LoginPage() {
         </div>
         <p className="mt-1 text-neutral-600">{t("app.login.desc")}</p>
 
-        <div className="mt-4 flex gap-3">
+        <form action="/api/auth/login" className="mt-4 flex gap-3">
           <div className="relative h-12 w-full rounded-sm bg-card">
             <Icon
               glyph="email"
@@ -54,16 +54,21 @@ export default async function LoginPage() {
               className="absolute size-5 top-3.5 left-3 pointer-events-none"
             />
             <Input
+              name="email"
               type="email"
+              required
               placeholder={t("app.login.email-placeholder")}
               className="h-full rounded-none border-0 bg-transparent pl-10 py-0 text-base text-white shadow-none placeholder:text-foreground focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
             />
           </div>
-          <button className="flex size-12 flex-none rounded-sm cursor-pointer items-center justify-center bg-primary text-white">
+          <button
+            type="submit"
+            className="flex size-12 flex-none rounded-sm cursor-pointer items-center justify-center bg-primary text-white"
+          >
             <ArrowRightIcon className="size-5" strokeWidth={2.5} />
             <span className="sr-only">Next</span>
           </button>
-        </div>
+        </form>
       </div>
       <a
         href="/api/auth/login"

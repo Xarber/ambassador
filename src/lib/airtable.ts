@@ -47,6 +47,8 @@ type AirtableRequestInit = Omit<RequestInit, "body"> & {
   body?: unknown
 }
 
+type AirtableCallOptions = Pick<RequestInit, "signal">
+
 function requireAirtablePat() {
   const token = process.env.AIRTABLE_PAT?.trim()
 
@@ -131,6 +133,7 @@ export class AirtableClient {
   async listRecords<TFields extends Record<string, unknown>>(
     table: string,
     options: AirtableListOptions = {},
+    requestOptions: AirtableCallOptions = {},
   ) {
     const query = new URLSearchParams()
 
@@ -150,22 +153,33 @@ export class AirtableClient {
       method: "GET",
       query,
       cache: "no-store",
+      ...requestOptions,
     })
   }
 
-  async getRecord<TFields extends Record<string, unknown>>(table: string, recordId: string) {
+  async getRecord<TFields extends Record<string, unknown>>(
+    table: string,
+    recordId: string,
+    requestOptions: AirtableCallOptions = {},
+  ) {
     return this.request<AirtableRecord<TFields>>(`${table}/${recordId}`, {
       method: "GET",
       cache: "no-store",
+      ...requestOptions,
     })
   }
 
-  async createRecord<TFields extends Record<string, unknown>>(table: string, fields: TFields) {
+  async createRecord<TFields extends Record<string, unknown>>(
+    table: string,
+    fields: TFields,
+    requestOptions: AirtableCallOptions = {},
+  ) {
     return this.request<AirtableRecord<TFields>>(table, {
       method: "POST",
       body: {
         fields: sanitizeAirtableFields(fields),
       },
+      ...requestOptions,
     })
   }
 
@@ -173,12 +187,14 @@ export class AirtableClient {
     table: string,
     recordId: string,
     fields: Partial<TFields>,
+    requestOptions: AirtableCallOptions = {},
   ) {
     return this.request<AirtableRecord<TFields>>(`${table}/${recordId}`, {
       method: "PATCH",
       body: {
         fields: sanitizeAirtableFields(fields),
       },
+      ...requestOptions,
     })
   }
 

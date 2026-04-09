@@ -1,12 +1,20 @@
 import { cookies } from "next/headers";
 
 import {
+  AUTH_INTENT_COOKIE_NAME,
+  createAuthLoginIntent,
+  isValidEmail,
+  normalizeEmail,
+} from "@/lib/auth-intents";
+import {
   getAuthorizationUrl,
   OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
   OAUTH_STATE_COOKIE_NAME,
 } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const submittedEmail = url.searchParams.get("email");
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
 
@@ -17,6 +25,35 @@ export async function GET() {
     path: "/",
     maxAge: OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
   });
+  cookieStore.delete(AUTH_INTENT_COOKIE_NAME);
 
-  return Response.redirect(getAuthorizationUrl(state));
+  let loginHint: string | undefined;
+
+  if (submittedEmail) {
+    try {
+      const intent = await createAuthLoginIntent({
+        email: submittedEmail,
+      });
+
+      if (intent) {
+        loginHint = intent.email;
+        cookieStore.set(AUTH_INTENT_COOKIE_NAME, intent.id, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30,
+        });
+      } else if (isValidEmail(normalizeEmail(submittedEmail))) {
+        loginHint = normalizeEmail(submittedEmail);
+      }
+    } catch (error) {
+      console.error("Failed to create auth login intent", { error });
+      if (isValidEmail(normalizeEmail(submittedEmail))) {
+        loginHint = normalizeEmail(submittedEmail);
+      }
+    }
+  }
+
+  return Response.redirect(getAuthorizationUrl(state, loginHint));
 }

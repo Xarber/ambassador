@@ -4,7 +4,7 @@ const callbackUrl = `${requireEnv("CURRENT_DOMAIN")}/hca/oauth2/callback`;
 export const OAUTH_STATE_COOKIE_NAME = "ambassador_oauth_state";
 export const OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 600;
 
-export function getAuthorizationUrl(state: string) {
+export function getAuthorizationUrl(state: string, loginHint?: string) {
   const params = new URLSearchParams({
     client_id: requireEnv("HCA_CLIENT_ID"),
     redirect_uri: callbackUrl,
@@ -12,6 +12,10 @@ export function getAuthorizationUrl(state: string) {
     scope: "email name profile address verification_status slack_id",
     state,
   });
+
+  if (loginHint) {
+    params.set("login_hint", loginHint);
+  }
 
   return `${requireEnv("HCA_ISSUER")}/oauth/authorize?${params}`;
 }
