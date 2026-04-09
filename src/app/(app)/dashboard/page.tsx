@@ -44,18 +44,24 @@ type IconGlyph = NonNullable<ComponentProps<typeof Icon>["glyph"]>;
 type Tone = "primary" | "accent" | "acceptance" | "rejection";
 type StepKey = "apply" | "verify" | "review" | "decision";
 type Decision = "approved" | "rejected" | "banned" | null;
+type ResolvedState = {
+  node: ReactNode;
+  activeStep: StepKey | null;
+  decision: Decision;
+  devState: DevState;
+};
 
 const toneText: Record<Tone, string> = {
   primary: "text-primary",
   accent: "text-accent",
   acceptance: "text-acceptance",
-  rejection: "text-rejection",
+  rejection: "text-primary",
 };
 const toneBg: Record<Tone, string> = {
   primary: "bg-primary",
   accent: "bg-accent",
   acceptance: "bg-acceptance",
-  rejection: "bg-rejection",
+  rejection: "bg-primary",
 };
 
 const STEP_ORDER: StepKey[] = ["apply", "verify", "review", "decision"];
@@ -67,6 +73,23 @@ type ShirtOrderRow = {
   warehouse_order_id: string | null;
   warehouse_payload: unknown | null;
   note: string | null;
+};
+
+type ApplicationRow = {
+  id: string;
+  status: string;
+  name: string;
+  created_at: string;
+};
+
+type UserRow = {
+  balance_cents: number | null;
+  is_admin: boolean | null;
+  ambassador_region: string | null;
+  country_name: string | null;
+  shirt_enabled: boolean | null;
+  hca_access_token: string | null;
+  manual_dashboard_state: string | null;
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -88,12 +111,12 @@ export default async function DashboardPage({
   ]);
 
   const [[application], [user], [existingOrderRow]] = await Promise.all([
-    sql`
+    sql<ApplicationRow[]>`
       SELECT id, status, name, created_at
       FROM applications WHERE user_id = ${session.sub}
       ORDER BY created_at DESC LIMIT 1
     `,
-    sql`
+    sql<UserRow[]>`
       SELECT balance_cents, is_admin, ambassador_region, country_name,
              shirt_enabled, hca_access_token, manual_dashboard_state
       FROM users WHERE id = ${session.sub}
@@ -107,15 +130,14 @@ export default async function DashboardPage({
     `,
   ]);
 
+  const shirtEnabled = Boolean(user?.shirt_enabled);
   const shouldLoadShirtAddresses =
-    Boolean((user as { shirt_enabled?: boolean | null } | undefined)?.shirt_enabled) &&
-    Boolean(application && isAcceptedApplicationStatus(application.status));
+    shirtEnabled && Boolean(application && isAcceptedApplicationStatus(application.status));
   let shirtNeedsAddressRefresh = false;
   let shirtAddresses: HackClubAddress[] = [];
 
   if (shouldLoadShirtAddresses) {
-    const hcaAccessToken = (user as { hca_access_token?: string | null } | undefined)
-      ?.hca_access_token;
+    const hcaAccessToken = user?.hca_access_token;
 
     if (!hcaAccessToken) {
       shirtNeedsAddressRefresh = true;
@@ -131,70 +153,36 @@ export default async function DashboardPage({
       shirtAddresses = shirtAddresses.filter(isCompleteHackClubAddress);
     }
   }
+  const warehouseOrder = existingOrderRow
+    ? parseWarehouseOrderResponse(existingOrderRow.warehouse_payload)
+    : null;
+  const warehouseOrderId =
+    existingOrderRow?.warehouse_order_id ?? warehouseOrder?.id ?? null;
   const shirtExistingOrder: ShirtOrderState | null = existingOrderRow
-    ? (() => {
-        const warehouseOrder = parseWarehouseOrderResponse(
-          existingOrderRow.warehouse_payload,
-        );
-        const warehouseOrderId =
-          existingOrderRow.warehouse_order_id ?? warehouseOrder?.id ?? null;
-
-        return {
-          id: existingOrderRow.id,
-          status: existingOrderRow.status,
-          size: existingOrderRow.variant,
-          warehouseUrl: warehouseOrderId
-            ? buildWarehouseTrackingUrl(warehouseOrderId)
-            : null,
-          publicOrderUrl: warehouseOrderId
-            ? buildWarehousePublicOrderUrl(warehouseOrderId)
-            : null,
-          note: existingOrderRow.note,
-        };
-      })()
+    ? {
+        id: existingOrderRow.id,
+        status: existingOrderRow.status,
+        size: existingOrderRow.variant,
+        warehouseUrl: warehouseOrderId ? buildWarehouseTrackingUrl(warehouseOrderId) : null,
+        publicOrderUrl: warehouseOrderId
+          ? buildWarehousePublicOrderUrl(warehouseOrderId)
+          : null,
+        note: existingOrderRow.note,
+      }
     : null;
   const shirt: ShirtOrderSectionProps = {
-    shirtEnabled: Boolean(
-      (user as { shirt_enabled?: boolean | null } | undefined)?.shirt_enabled,
-    ),
+    shirtEnabled,
     addresses: shirtAddresses,
     needsAddressRefresh: shirtNeedsAddressRefresh,
     existingOrder: shirtExistingOrder,
   };
 
   const fakeDate = new Date().toISOString();
-  const baseResolved = resolveState({
-    activeDevState: null,
-    application: application as { status: string; created_at: string } | undefined,
-    user: user as
-      | {
-          ambassador_region?: string | null;
-          country_name?: string | null;
-          manual_dashboard_state?: string | null;
-        }
-      | undefined,
-    locale,
-    fakeDate,
-    t,
-    shirt,
-  });
-  const selectedDevState = normalizeDevState(devState);
+  const stateInput = { application, user, locale, fakeDate, t, shirt };
+  const baseResolved = resolveState({ ...stateInput, activeDevState: null });
+  const selectedDevState = devState && isDevState(devState) ? devState : null;
   const resolved = isDevelopmentEnvironment && selectedDevState
-    ? resolveState({
-        activeDevState: selectedDevState,
-        application: application as { status: string; created_at: string } | undefined,
-        user: user as
-          | {
-              ambassador_region?: string | null;
-              country_name?: string | null;
-              manual_dashboard_state?: string | null;
-            }
-          | undefined,
-        locale,
-        fakeDate,
-        t,
-        shirt,
-      })
+    ? resolveState({ ...stateInput, activeDevState: selectedDevState })
     : baseResolved;
   const canUseSelector = canShowDevAdminSelector(Boolean(user?.is_admin ?? session.isAdmin));
   const devSwitcherCurrent = selectedDevState ?? baseResolved.devState;
@@ -252,42 +240,64 @@ function resolveState({
   fakeDate: string;
   t: DashboardTranslations;
   shirt: ShirtOrderSectionProps;
-}): { node: ReactNode; activeStep: StepKey | null; decision: Decision; devState: DevState } {
-  const ineligible = { node: <IneligibleRegion t={t} />, activeStep: "apply" as const, decision: null, devState: "ineligible" as const };
-  const apply = { node: <NoApplication t={t} />, activeStep: "apply" as const, decision: null, devState: "apply" as const };
-  const verify = {
-    node: <PendingAutomaticChecksApplication t={t} />,
-    activeStep: "verify" as const,
-    decision: null,
-    devState: "pending-checks" as const,
-  };
-  const pending = (createdAt: string) => ({
-    node: <PendingApplication createdAt={createdAt} dateFormatLocale={locale} t={t} />,
-    activeStep: "review" as const,
-    decision: null,
-    devState: "pending" as const,
-  });
-  const approved = {
-    node: <ApprovedApplication t={t} shirt={shirt} />,
-    activeStep: "decision" as const,
-    decision: "approved" as const,
-    devState: "approved" as const,
-  };
-  const rejected = { node: <RejectedApplication t={t} />, activeStep: "apply" as const, decision: null, devState: "rejected" as const };
-  const banned = {
-    node: <RejectedPermanentlyApplication t={t} />,
-    activeStep: "decision" as const,
-    decision: "banned" as const,
-    devState: "banned" as const,
-  };
+}): ResolvedState {
+  const states = {
+    ineligible: {
+      node: <IneligibleRegion t={t} />,
+      activeStep: "apply",
+      decision: null,
+      devState: "ineligible",
+    },
+    apply: {
+      node: <NoApplication t={t} />,
+      activeStep: "apply",
+      decision: null,
+      devState: "apply",
+    },
+    "pending-checks": {
+      node: <PendingAutomaticChecksApplication t={t} />,
+      activeStep: "verify",
+      decision: null,
+      devState: "pending-checks",
+    },
+    approved: {
+      node: <ApprovedApplication t={t} shirt={shirt} />,
+      activeStep: "decision",
+      decision: "approved",
+      devState: "approved",
+    },
+    rejected: {
+      node: <RejectedApplication t={t} />,
+      activeStep: "apply",
+      decision: null,
+      devState: "rejected",
+    },
+    banned: {
+      node: <RejectedPermanentlyApplication t={t} />,
+      activeStep: "decision",
+      decision: "banned",
+      devState: "banned",
+    },
+  } satisfies Record<Exclude<DevState, "pending">, ResolvedState>;
 
-  if (activeDevState === "ineligible") return ineligible;
-  if (activeDevState === "pending-checks") return verify;
-  if (activeDevState === "pending") return pending(fakeDate);
-  if (activeDevState === "approved") return approved;
-  if (activeDevState === "rejected") return rejected;
-  if (activeDevState === "banned") return banned;
-  if (activeDevState === "apply") return apply;
+  switch (activeDevState) {
+    case "ineligible":
+    case "pending-checks":
+    case "approved":
+    case "rejected":
+    case "banned":
+    case "apply":
+      return states[activeDevState];
+    case "pending":
+      return {
+        node: <PendingApplication createdAt={fakeDate} dateFormatLocale={locale} t={t} />,
+        activeStep: "review",
+        decision: null,
+        devState: "pending",
+      };
+    default:
+      break;
+  }
 
   const resolvedRegion = resolveAmbassadorRegion(
     user?.ambassador_region ?? null,
@@ -298,22 +308,26 @@ function resolveState({
     ? manualDashboardStateValue
     : null;
 
-  if (!application && manualDashboardState === "approved") return approved;
-  if (!application && manualDashboardState === "rejected") return rejected;
-  if (!application && manualDashboardState === "banned") return banned;
-  if (!application && resolvedRegion === "Other") return ineligible;
-  if (!application) return apply;
-  if (application.status === APPLICATION_STATUS_PENDING_AUTOMATIC_CHECKS) return verify;
-  if (isPendingApplicationStatus(application.status)) return pending(application.created_at);
-  if (isAcceptedApplicationStatus(application.status)) return approved;
-  if (isRejectedApplicationStatus(application.status)) return rejected;
-  if (isRejectedPermanentlyApplicationStatus(application.status)) return banned;
+  if (manualDashboardState === "approved") return states.approved;
+  if (manualDashboardState === "rejected") return states.rejected;
+  if (manualDashboardState === "banned") return states.banned;
+  if (!application && resolvedRegion === "Other") return states.ineligible;
+  if (!application) return states.apply;
+  if (application.status === APPLICATION_STATUS_PENDING_AUTOMATIC_CHECKS) {
+    return states["pending-checks"];
+  }
+  if (isPendingApplicationStatus(application.status)) {
+    return {
+      node: <PendingApplication createdAt={application.created_at} dateFormatLocale={locale} t={t} />,
+      activeStep: "review",
+      decision: null,
+      devState: "pending",
+    };
+  }
+  if (isAcceptedApplicationStatus(application.status)) return states.approved;
+  if (isRejectedApplicationStatus(application.status)) return states.rejected;
+  if (isRejectedPermanentlyApplicationStatus(application.status)) return states.banned;
   return { node: null, activeStep: null, decision: null, devState: "apply" };
-}
-
-function normalizeDevState(value: string | DevState | undefined): DevState | null {
-  if (!value) return null;
-  return isDevState(value) ? value : null;
 }
 
 function JourneyStepper({

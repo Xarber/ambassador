@@ -60,7 +60,7 @@ export default function ShirtOrderSection(props: ShirtOrderSectionProps) {
         <p className="mt-2 text-base text-black">
           {retryableWarningParts?.map((part, index) =>
             /^rejected$/i.test(part) ? (
-              <span key={`${part}-${index}`} className="text-rejection">
+              <span key={`${part}-${index}`} className="text-primary">
                 {part}
               </span>
             ) : (
@@ -469,7 +469,7 @@ function LatestOrderCard({ order }: { order: ShirtOrderState }) {
         order.status === ORDER_STATUS_FAILED ||
         order.status === ORDER_STATUS_CANCELLED) &&
       order.note ? (
-        <p className="mt-3 font-body text-sm text-rejection">{order.note}</p>
+        <p className="mt-3 font-body text-sm text-primary">{order.note}</p>
       ) : null}
 
       {order.warehouseUrl || order.publicOrderUrl ? (

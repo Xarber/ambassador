@@ -3,6 +3,13 @@ import { getTranslations } from "next-intl/server";
 
 import Icon from "@hackclub/icons";
 
+import { cn } from "@/lib/utils";
+
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
 export async function Navbar({
   isAdmin = false,
   balanceCents = 0,
@@ -13,15 +20,14 @@ export async function Navbar({
   showBottomBorder?: boolean;
 }) {
   const t = await getTranslations();
-
-  const dollars = (balanceCents / 100).toFixed(2);
+  const balance = usdFormatter.format(balanceCents / 100);
 
   return (
     <nav
-      className={[
+      className={cn(
         "bg-[var(--topbar)] px-6 py-4",
-        showBottomBorder ? "border-b border-foreground/10" : "",
-      ].join(" ")}
+        showBottomBorder && "border-b border-foreground/10",
+      )}
     >
       <div className="mx-auto flex max-w-5xl items-center justify-between">
         <a href="/dashboard" className="flex items-center gap-3">
@@ -35,7 +41,7 @@ export async function Navbar({
         </a>
         <div className="flex items-center gap-2">
           <span className="inline-flex h-9 items-center rounded-lg px-3 text-base tracking-wide text-acceptance">
-            ${dollars}
+            {balance}
           </span>
           {isAdmin && (
             <a

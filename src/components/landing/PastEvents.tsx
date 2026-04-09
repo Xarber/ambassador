@@ -7,6 +7,13 @@ import siege from "@/assets/landing/events/siege.png";
 import orphWowCute from "@/assets/landing/emotes/orph-wowcute.png";
 import { useTranslations } from "next-intl";
 
+const events = [
+  { key: "flagship", image: campfireFlagship, decoration: false },
+  { key: "blueprint", image: blueprint, decoration: false },
+  { key: "midnight", image: midnight, decoration: true },
+  { key: "siege", image: siege, decoration: false },
+] as const;
+
 export default function PastEvents() {
   const t = useTranslations("landing.past-events");
 
@@ -26,50 +33,27 @@ export default function PastEvents() {
         </p>
       </div>
       <div className="mt-8 lg:columns-2 gap-8 space-y-12 *:break-inside-avoid">
-        <section>
-          <Image
-            src={campfireFlagship}
-            alt=""
-            className="w-full aspect-3/2 object-cover border-[0.75rem] border-white shadow-lg"
-          />
-          <p className="mt-6 text-xl font-bold">{t("flagship.title")}</p>
-          <p className="mt-1 text-xl">{t("flagship.desc")}</p>
-        </section>
-        <section>
-          <Image
-            src={blueprint}
-            alt=""
-            className="w-full aspect-3/2 object-cover border-[0.75rem] border-white shadow-lg"
-          />
-          <p className="mt-6 text-xl font-bold">{t("blueprint.title")}</p>
-          <p className="mt-1 text-xl">{t("blueprint.desc")}</p>
-        </section>
-        <section>
-          <div className="relative">
-            <Image
-              src={midnight}
-              alt=""
-              className="w-full aspect-3/2 object-cover border-[0.75rem] border-white shadow-lg"
-            />
-            <Image
-              src={orphWowCute}
-              alt=""
-              role="presentation"
-              className="h-24 -left-8 -bottom-8 -rotate-3 -scale-x-100 absolute w-auto"
-            />
-          </div>
-          <p className="mt-6 text-xl font-bold">{t("midnight.title")}</p>
-          <p className="mt-1 text-xl">{t("midnight.desc")}</p>
-        </section>
-        <section>
-          <Image
-            src={siege}
-            alt=""
-            className="w-full aspect-3/2 object-cover border-[0.75rem] border-white shadow-lg"
-          />
-          <p className="mt-6 text-xl font-bold">{t("siege.title")}</p>
-          <p className="mt-1 text-xl">{t("siege.desc")}</p>
-        </section>
+        {events.map((event) => (
+          <section key={event.key}>
+            <div className={event.decoration ? "relative" : undefined}>
+              <Image
+                src={event.image}
+                alt=""
+                className="w-full aspect-3/2 object-cover border-[0.75rem] border-white shadow-lg"
+              />
+              {event.decoration && (
+                <Image
+                  src={orphWowCute}
+                  alt=""
+                  role="presentation"
+                  className="h-24 -left-8 -bottom-8 -rotate-3 -scale-x-100 absolute w-auto"
+                />
+              )}
+            </div>
+            <p className="mt-6 text-xl font-bold">{t(`${event.key}.title`)}</p>
+            <p className="mt-1 text-xl">{t(`${event.key}.desc`)}</p>
+          </section>
+        ))}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export default function Header() {
         role="presentation"
         className="h-12 w-auto"
       />
-      <div className="flex-1 min-w-0"></div>
+      <div className="flex-1 min-w-0" />
       <Link
         href="/auth"
         className="font-medium hover:text-black hover:underline underline-offset-2 transition hover:scale-105 text-neutral-600 text-sm"

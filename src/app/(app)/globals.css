@@ -25,8 +25,6 @@
   --destructive: #ec3750;
   --acceptance: #16a34a;
   --acceptance-foreground: #fff;
-  --rejection: #d84f4f;
-  --rejection-foreground: #fff;
   --border: color-mix(in srgb, var(--foreground) 10%, var(--background));
   --input: color-mix(in srgb, var(--foreground) 10%, var(--background));
   --ring: #ec3750;
@@ -43,8 +41,8 @@
   --chart-applications: color-mix(in srgb, var(--primary) 78%, var(--background));
   --chart-pending: color-mix(in srgb, var(--secondary) 88%, var(--background));
   --chart-approved: var(--acceptance);
-  --chart-rejected: color-mix(in srgb, var(--rejection) 70%, var(--secondary));
-  --chart-banned: var(--rejection);
+  --chart-rejected: color-mix(in srgb, #d84f4f 70%, var(--secondary));
+  --chart-banned: #d84f4f;
 }
 
 @theme inline {
@@ -65,8 +63,6 @@
   --color-destructive: var(--destructive);
   --color-acceptance: var(--acceptance);
   --color-acceptance-foreground: var(--acceptance-foreground);
-  --color-rejection: var(--rejection);
-  --color-rejection-foreground: var(--rejection-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -299,10 +295,8 @@ a {
 
   .bg-primary.text-white,
   .bg-acceptance.text-white,
-  .bg-rejection.text-white,
   .bg-primary .text-white,
-  .bg-acceptance .text-white,
-  .bg-rejection .text-white {
+  .bg-acceptance .text-white {
     color: #fff !important;
   }
 

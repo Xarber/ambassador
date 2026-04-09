@@ -10,6 +10,19 @@ import blindDefusal from "@/assets/landing/projects-bg/blind-defusal.png";
 import orphThumbsUp from "@/assets/landing/emotes/orph-thumbsup.png";
 import { useTranslations } from "next-intl";
 
+const projects = [
+  { key: "doom-pdf", image: doomPdf, textClassName: "text-white" },
+  { key: "librepods", image: librepods, textClassName: "" },
+  { key: "vert", image: vert, textClassName: "" },
+  {
+    key: "biblically-accurate",
+    image: biblicallyAccurate,
+    textClassName: "text-white",
+  },
+  { key: "specter", image: specter, textClassName: "text-white" },
+  { key: "blind-defusal", image: blindDefusal, textClassName: "text-white" },
+] as const;
+
 export default function PastProjects() {
   const t = useTranslations("landing.past-projects");
 
@@ -17,102 +30,26 @@ export default function PastProjects() {
     <div className="p-12">
       <h2 className="text-4xl md:text-5xl font-jersey">{t("title")}</h2>
       <div className="mt-8 gap-6 relative text-black grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="relative @container">
-          <Image
-            src={doomPdf}
-            alt={t("doom-pdf.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight text-white p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("doom-pdf.desc")}
-            </p>
-            <p className="text-[3.33cqw] ">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("doom-pdf.by")}
-            </p>
+        {projects.map((project) => (
+          <div key={project.key} className="relative @container">
+            <Image
+              src={project.image}
+              alt={t(`${project.key}.title`)}
+              className="w-full h-auto shadow-lg"
+            />
+            <div
+              className={`absolute inset-0 flex flex-col items-center justify-end gap-[4cqw] p-[6.66cqw] text-center leading-tight ${project.textClassName}`}
+            >
+              <p className="text-[5cqw] font-medium whitespace-pre-wrap">
+                {t(`${project.key}.desc`)}
+              </p>
+              <p className="text-[3.33cqw]">
+                <span className="text-current/60 italic">{t("by")} </span>
+                {t(`${project.key}.by`)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="relative @container">
-          <Image
-            src={librepods}
-            alt={t("librepods.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("librepods.desc")}
-            </p>
-            <p className="text-[3.33cqw]">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("librepods.by")}
-            </p>
-          </div>
-        </div>
-        <div className="relative @container">
-          <Image
-            src={vert}
-            alt={t("vert.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("vert.desc")}
-            </p>
-            <p className="text-[3.33cqw] ">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("vert.by")}
-            </p>
-          </div>
-        </div>
-        <div className="relative @container">
-          <Image
-            src={biblicallyAccurate}
-            alt={t("biblically-accurate.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight text-white p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("biblically-accurate.desc")}
-            </p>
-            <p className="text-[3.33cqw] ">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("biblically-accurate.by")}
-            </p>
-          </div>
-        </div>
-        <div className="relative @container">
-          <Image
-            src={specter}
-            alt={t("specter.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight text-white p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("specter.desc")}
-            </p>
-            <p className="text-[3.33cqw] ">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("specter.by")}
-            </p>
-          </div>
-        </div>
-        <div className="relative @container">
-          <Image
-            src={blindDefusal}
-            alt={t("blind-defusal.title")}
-            className="w-full h-auto shadow-lg"
-          />
-          <div className="absolute inset-0 leading-tight text-white p-[6.66cqw] gap-[4cqw] flex flex-col text-center justify-end items-center">
-            <p className="text-[5cqw] font-medium whitespace-pre-wrap">
-              {t("blind-defusal.desc")}
-            </p>
-            <p className="text-[3.33cqw] ">
-              <span className="text-current/60 italic">{t("by")} </span>
-              {t("blind-defusal.by")}
-            </p>
-          </div>
-        </div>
+        ))}
 
         <Image
           src={orphThumbsUp}

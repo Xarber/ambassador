@@ -123,8 +123,6 @@ export default async function AdminUserDetailPage({
 
   const totalVisitPages = Math.max(1, Math.ceil(visitCountResult / 3));
   const currentVisitPage = Math.min(visitsPage, totalVisitPages);
-  const shouldShowLatestApplicationLabel =
-    !!latestApplication && !isRejectedPermanentlyApplicationStatus(latestApplication.status);
   const shouldShowPermanentRejectionLabel =
     !!user.permanently_rejected_at &&
     !isRejectedPermanentlyApplicationStatus(latestApplication?.status);
@@ -148,6 +146,15 @@ export default async function AdminUserDetailPage({
   const manualDashboardStateLabel = manualDashboardState
     ? getUserManualDashboardStateLabel(t, manualDashboardState)
     : t("admin.user-detail.dashboard-state.no-manual-state");
+  const headerStatus = manualDashboardState
+    ? manualDashboardState
+    : shouldShowPermanentRejectionLabel
+      ? "rejected_permanently"
+      : latestApplication?.status ?? null;
+  const shouldShowHeaderLatestApplicationLabel =
+    !manualDashboardState &&
+    !!latestApplication &&
+    !shouldShowPermanentRejectionLabel;
 
   return (
     <div className="space-y-10">
@@ -171,10 +178,15 @@ export default async function AdminUserDetailPage({
               <h1 className="text-4xl text-white">{user.display_name}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {latestApplication ? (
+              {headerStatus ? (
                 <>
-                  <StatusBadge status={latestApplication.status} />
-                  {shouldShowLatestApplicationLabel ? (
+                  <StatusBadge status={headerStatus} />
+                  {manualDashboardState ? (
+                    <span className={pillVariants({ tone: "black" })}>
+                      {t("admin.user-detail.sections.dashboard-state.title")}
+                    </span>
+                  ) : null}
+                  {shouldShowHeaderLatestApplicationLabel ? (
                     <span className={pillVariants({ tone: "green" })}>
                       {t("admin.user-detail.latest-application")}
                     </span>
@@ -234,7 +246,7 @@ export default async function AdminUserDetailPage({
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <span className="font-body text-sm text-white">{latestApplication.id}</span>
                 <StatusBadge status={latestApplication.status} />
-                {shouldShowLatestApplicationLabel ? (
+                {shouldShowHeaderLatestApplicationLabel ? (
                   <span className={pillVariants({ tone: "green" })}>
                     {t("admin.user-detail.latest-application")}
                   </span>
@@ -305,19 +317,7 @@ export default async function AdminUserDetailPage({
         )}
       </DetailSection>
 
-      <DetailSection
-        title={t("admin.user-detail.sections.dashboard-state.title")}
-        description={t("admin.user-detail.sections.dashboard-state.description")}
-      >
-        <DetailFieldRow
-          label={t("admin.user-detail.dashboard-state.current-manual-state")}
-          value={manualDashboardStateLabel}
-        />
-        <p className="max-w-3xl font-body text-sm text-white">
-          {latestApplication
-            ? t("admin.user-detail.dashboard-state.application-precedence")
-            : t("admin.user-detail.dashboard-state.fallback-mode")}
-        </p>
+      <DetailSection title={t("admin.user-detail.sections.dashboard-state.title")}>
         <div className="flex flex-wrap gap-3">
           <form action={`/api/admin/users/${user.id}/state`} method="POST">
             <input type="hidden" name="redirectTo" value={`/admin/users/${user.id}`} />
@@ -336,14 +336,14 @@ export default async function AdminUserDetailPage({
           <form action={`/api/admin/users/${user.id}/state`} method="POST">
             <input type="hidden" name="redirectTo" value={`/admin/users/${user.id}`} />
             <input type="hidden" name="state" value="banned" />
-            <button className={buttonVariants({ variant: "destructive", size: "app-sm" })}>
+            <button className={buttonVariants({ size: "app-sm" })}>
               {t("admin.user-detail.dashboard-state.set-banned")}
             </button>
           </form>
           <form action={`/api/admin/users/${user.id}/state`} method="POST">
             <input type="hidden" name="redirectTo" value={`/admin/users/${user.id}`} />
             <input type="hidden" name="state" value="" />
-            <button className={buttonVariants({ variant: "outline", size: "app-sm" })}>
+            <button className={buttonVariants({ size: "app-sm" })}>
               {t("admin.user-detail.dashboard-state.clear-state")}
             </button>
           </form>

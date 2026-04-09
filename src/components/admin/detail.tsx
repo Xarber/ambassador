@@ -1,18 +1,22 @@
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
+
 export function DetailSection({
   title,
   description,
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="!rounded-none border border-white/10 bg-card p-5 md:p-6">
       <h2 className="text-2xl text-white">{title}</h2>
-      <p className="mt-2 max-w-3xl font-body text-base text-white">{description}</p>
+      {description ? (
+        <p className="mt-2 max-w-3xl font-body text-base text-white">{description}</p>
+      ) : null}
       <div className="mt-5 space-y-5">{children}</div>
     </section>
   );
@@ -31,19 +35,19 @@ export function DetailFieldRow({
   mono?: boolean;
   multiline?: boolean;
 }) {
+  const displayValue = value?.trim() ? value : emptyValue;
+
   return (
     <div className="grid gap-2 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-5">
       <div className="text-sm text-secondary">{label}</div>
       <div
-        className={[
+        className={cn(
           mono ? "font-body text-sm text-white" : "font-body text-base text-white",
           "break-words [overflow-wrap:anywhere]",
-          multiline ? "whitespace-pre-line" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+          multiline && "whitespace-pre-line",
+        )}
       >
-        {value && value.trim().length > 0 ? value : emptyValue}
+        {displayValue}
       </div>
     </div>
   );
@@ -66,23 +70,27 @@ export function DetailPager({
     return null;
   }
 
-  const className = outlined
-    ? "inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80"
-    : "inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80";
+  void outlined;
 
   return (
     <div className="flex items-center gap-2 pt-1">
-      {page > 1 ? (
-        <Link href={href(page - 1)} className={className}>
+      {page > 1 && (
+        <Link
+          href={href(page - 1)}
+          className="inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80"
+        >
           &lt;
         </Link>
-      ) : null}
+      )}
       <div className="font-body text-sm text-white">{label}</div>
-      {page < totalPages ? (
-        <Link href={href(page + 1)} className={className}>
+      {page < totalPages && (
+        <Link
+          href={href(page + 1)}
+          className="inline-flex items-center justify-center font-body text-sm text-white transition-opacity hover:opacity-80"
+        >
           &gt;
         </Link>
-      ) : null}
+      )}
     </div>
   );
 }

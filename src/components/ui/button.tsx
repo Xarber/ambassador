@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
-          "bg-rejection !text-white hover:opacity-80 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 data-[selected=true]:border-black data-[selected=true]:bg-black data-[selected=true]:!text-white data-[selected=true]:hover:opacity-100 aria-pressed:border-black aria-pressed:bg-black aria-pressed:!text-white aria-pressed:hover:opacity-100 aria-[current=page]:border-black aria-[current=page]:bg-black aria-[current=page]:!text-white aria-[current=page]:hover:opacity-100",
+          "bg-primary !text-white hover:opacity-80 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 data-[selected=true]:border-black data-[selected=true]:bg-black data-[selected=true]:!text-white data-[selected=true]:hover:opacity-100 aria-pressed:border-black aria-pressed:bg-black aria-pressed:!text-white aria-pressed:hover:opacity-100 aria-[current=page]:border-black aria-[current=page]:bg-black aria-[current=page]:!text-white aria-[current=page]:hover:opacity-100",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

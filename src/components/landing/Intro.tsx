@@ -7,10 +7,9 @@ import { useMessages, useTranslations } from "next-intl";
 import Link from "next/link";
 export default function Intro() {
   const t = useTranslations("landing");
-
   const messages = useMessages();
-  const keys = Object.keys(messages.landing.intro).filter(
-    (key) => !isNaN(Number(key)),
+  const introKeys = Object.keys(messages.landing.intro).filter((key) =>
+    Number.isFinite(Number(key)),
   );
 
   return (
@@ -20,7 +19,7 @@ export default function Intro() {
         --- START OF MESSAGE ---
       </p>
       <div className="leading-relaxed text-2xl md:text-3xl text-pretty space-y-4 mt-4">
-        {keys.map((key) => (
+        {introKeys.map((key) => (
           <p key={key}>
             {t.rich(`intro.${key}`, {
               strong: (chunks) => <strong>{chunks}</strong>,

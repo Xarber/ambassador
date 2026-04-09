@@ -544,7 +544,7 @@ admin:
         title: User Actions
         description: All of these controls target the newest application on file.
       dashboard-state:
-        title: Dashboard State
+        title: Status Override
         description: Manual fallback state for users without an application. If they apply later, the latest application status takes precedence automatically.
       flags:
         title: Flags
@@ -588,10 +588,10 @@ admin:
       no-manual-state: No manual state set
       application-precedence: This user has an application on file, so its status currently takes precedence over the manual fallback state.
       fallback-mode: This manual state is the current dashboard state until the user submits an application.
-      set-approved: Set approved
-      set-rejected: Set rejected
-      set-banned: Set banned
-      clear-state: Clear manual state
+      set-approved: Approve
+      set-rejected: Reject
+      set-banned: Ban
+      clear-state: Clear
     profile-fields:
       display-name: Display name
       first-name: First name

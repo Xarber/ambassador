@@ -114,7 +114,7 @@ export default async function AdminOrdersPage() {
                 <td className="px-5 py-4">
                   <OrderStatusBadge status={order.status} />
                   {order.note ? (
-                    <p className="mt-2 max-w-xs font-body text-sm text-rejection">
+                    <p className="mt-2 max-w-xs font-body text-sm text-primary">
                       {order.note}
                     </p>
                   ) : null}

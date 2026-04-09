@@ -210,9 +210,9 @@ export function PostersClient({
 
 function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-rejection/40 bg-rejection/10 px-4 py-3 text-sm text-rejection">
+    <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary">
       <span>{message}</span>
-      <button type="button" onClick={onDismiss} className="text-rejection/80 hover:text-rejection">
+      <button type="button" onClick={onDismiss} className="text-primary/80 hover:text-primary">
         <Icon glyph="view-close" size={16} />
       </button>
     </div>
@@ -438,7 +438,7 @@ function PosterTile({ poster, dense = true }: { poster: ClientPoster; dense?: bo
     pending: "text-accent",
     in_review: "text-accent",
     success: "text-acceptance",
-    rejected: "text-rejection",
+    rejected: "text-primary",
     digital: "text-primary",
   };
 
@@ -668,7 +668,7 @@ function VerifyModal({
               ) : null}
 
               {error ? (
-                <p className="text-sm text-rejection">{error}</p>
+                <p className="text-sm text-primary">{error}</p>
               ) : null}
             </div>
           )}
@@ -717,7 +717,7 @@ function GeolocationStatus({ state, onRetry }: { state: GeoState; onRetry: () =>
 
   if (state.kind === "error") {
     return (
-      <div className="rounded-lg border border-rejection/40 bg-rejection/5 px-4 py-3 text-sm text-rejection">
+      <div className="rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm text-primary">
         <p>{state.message}</p>
         <Button type="button" variant="secondary" size="app-sm" onClick={onRetry} className="mt-2">
           {t("verify-modal.location-retry")}
@@ -740,7 +740,7 @@ function ResultView({ result }: { result: ScanResult }) {
       ? "text-acceptance"
       : result.status === "in_review"
         ? "text-accent"
-        : "text-rejection";
+        : "text-primary";
 
   return (
     <div className="space-y-3">

@@ -12,7 +12,6 @@ export default function Footer() {
   return (
     <footer className="bg-neutral-900 mt-8 relative text-white">
       <Sep className="absolute top-0 -translate-y-1/2 inset-x-0" />
-      {/* TODO: add variation with closed eyes on hover */}
       <Image
         src={orphHappy}
         alt=""
