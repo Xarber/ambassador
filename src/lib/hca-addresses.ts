@@ -12,22 +12,23 @@ type LoadUserHackClubAddressesInput = {
   accessToken: string | null;
 };
 
-export function getStoredHackClubAddresses(value: unknown) {
-  return normalizeHackClubAddresses(value).filter(isCompleteHackClubAddress);
-}
-
 export async function cacheHackClubAddresses(userId: string, addresses: HackClubAddress[]) {
   const normalizedAddresses = normalizeHackClubAddresses(addresses);
-  const primaryAddress = normalizedAddresses[0] ?? null;
+  const primaryAddress = normalizedAddresses.at(0) ?? null;
+  const primaryAddressLine1 = primaryAddress ? primaryAddress.line_1 : null;
+  const primaryAddressCity = primaryAddress ? primaryAddress.city : null;
+  const primaryAddressState = primaryAddress ? primaryAddress.state : null;
+  const primaryAddressPostalCode = primaryAddress ? primaryAddress.postal_code : null;
+  const primaryAddressCountry = primaryAddress ? primaryAddress.country : null;
 
   await sql`
     UPDATE users
     SET
-      hca_street_address = ${primaryAddress?.line_1 ?? null},
-      hca_locality = ${primaryAddress?.city ?? null},
-      hca_region = ${primaryAddress?.state ?? null},
-      hca_postal_code = ${primaryAddress?.postal_code ?? null},
-      hca_country = ${primaryAddress?.country ?? null},
+      hca_street_address = ${primaryAddressLine1},
+      hca_locality = ${primaryAddressCity},
+      hca_region = ${primaryAddressState},
+      hca_postal_code = ${primaryAddressPostalCode},
+      hca_country = ${primaryAddressCountry},
       hca_addresses = CAST(${JSON.stringify(normalizedAddresses)} AS JSONB),
       updated_at = NOW()
     WHERE id = ${userId}
@@ -36,17 +37,14 @@ export async function cacheHackClubAddresses(userId: string, addresses: HackClub
   return normalizedAddresses;
 }
 
-export async function refreshHackClubAddresses(userId: string, accessToken: string) {
-  const addresses = normalizeHackClubAddresses(await fetchHackClubAddresses(accessToken));
-  return cacheHackClubAddresses(userId, addresses);
-}
-
 export async function loadUserHackClubAddresses({
   userId,
   storedAddresses,
   accessToken,
 }: LoadUserHackClubAddressesInput) {
-  const cachedAddresses = getStoredHackClubAddresses(storedAddresses);
+  const cachedAddresses = normalizeHackClubAddresses(storedAddresses).filter(
+    isCompleteHackClubAddress,
+  );
 
   if (cachedAddresses.length > 0) {
     return {
@@ -63,7 +61,10 @@ export async function loadUserHackClubAddresses({
   }
 
   try {
-    const addresses = await refreshHackClubAddresses(userId, accessToken);
+    const addresses = await cacheHackClubAddresses(
+      userId,
+      normalizeHackClubAddresses(await fetchHackClubAddresses(accessToken)),
+    );
 
     return {
       addresses: addresses.filter(isCompleteHackClubAddress),

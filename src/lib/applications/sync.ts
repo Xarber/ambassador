@@ -1,8 +1,8 @@
 import sql from "@/lib/database/client";
 import {
   type AirtableApplicationRecord,
+  getAirtableApplicationFieldValue,
   listAirtableApplicationRecords,
-  resolveApplicationFieldName,
 } from "@/lib/applications/airtable";
 import {
   APPLICATION_STATUS_PENDING_REVIEW,
@@ -34,44 +34,15 @@ type MatchedUser = {
   id: string;
 };
 
-function getRecordField(record: AirtableApplicationRecord, key: Parameters<typeof resolveApplicationFieldName>[1]) {
-  const fieldName = resolveApplicationFieldName(record.fields, key);
-
-  return fieldName ? record.fields[fieldName] : null;
-}
-
 function throwIfAborted(signal?: AbortSignal) {
   if (!signal?.aborted) return;
 
   throw signal.reason instanceof Error ? signal.reason : new Error("Airtable sync was aborted");
 }
 
-function getStringField(
-  record: AirtableApplicationRecord,
-  key: Parameters<typeof resolveApplicationFieldName>[1],
-) {
-  const value = getRecordField(record, key);
-
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function getApplicationName(record: AirtableApplicationRecord) {
-  const explicitName = getStringField(record, "name");
-  if (explicitName) return explicitName;
-
-  const preferredName = getStringField(record, "preferredName");
-  const firstName = getStringField(record, "firstName");
-  const lastName = getStringField(record, "lastName");
-
-  const parts = [preferredName ?? firstName, lastName].filter(
-    (value): value is string => Boolean(value),
-  );
-
-  return parts.length > 0 ? parts.join(" ") : null;
-}
-
 async function findMatchedUser(record: AirtableApplicationRecord): Promise<MatchedUser | null> {
-  const slackId = getStringField(record, "slackId");
+  const slackIdValue = getAirtableApplicationFieldValue(record.fields, "slackId");
+  const slackId = typeof slackIdValue === "string" && slackIdValue.trim() ? slackIdValue.trim() : null;
 
   if (slackId) {
     const [user] = await sql<MatchedUser[]>`
@@ -85,7 +56,8 @@ async function findMatchedUser(record: AirtableApplicationRecord): Promise<Match
     if (user) return user;
   }
 
-  const email = getStringField(record, "email");
+  const emailValue = getAirtableApplicationFieldValue(record.fields, "email");
+  const email = typeof emailValue === "string" && emailValue.trim() ? emailValue.trim() : null;
 
   if (!email) return null;
 
@@ -207,10 +179,65 @@ export async function syncAirtableApplicationsToPostgres(
     `;
     throwIfAborted(options.signal);
 
+    const fieldValues = Object.fromEntries(
+      ([
+        "status",
+        "preferredName",
+        "firstName",
+        "lastName",
+        "rejectionReason",
+        "email",
+        "slackId",
+        "phone",
+        "birthdate",
+        "addressLine1",
+        "addressLine2",
+        "addressCity",
+        "addressState",
+        "addressZip",
+        "addressCountry",
+        "githubUrl",
+        "portfolioUrl",
+        "applicationFirstThingDo",
+        "applicationBestPlacePoster",
+        "idvStatus",
+      ] as const).map((key) => {
+        const value = getAirtableApplicationFieldValue(record.fields, key);
+
+        return [key, typeof value === "string" && value.trim() ? value.trim() : null];
+      }),
+    ) as Record<
+      | "status"
+      | "preferredName"
+      | "firstName"
+      | "lastName"
+      | "rejectionReason"
+      | "email"
+      | "slackId"
+      | "phone"
+      | "birthdate"
+      | "addressLine1"
+      | "addressLine2"
+      | "addressCity"
+      | "addressState"
+      | "addressZip"
+      | "addressCountry"
+      | "githubUrl"
+      | "portfolioUrl"
+      | "applicationFirstThingDo"
+      | "applicationBestPlacePoster"
+      | "idvStatus",
+      string | null
+    >;
     const status =
-      normalizeApplicationStatus(getStringField(record, "status")) ||
+      normalizeApplicationStatus(fieldValues.status) ||
       APPLICATION_STATUS_PENDING_REVIEW;
-    const rejectionReason = getStringField(record, "rejectionReason");
+    const applicationName =
+      [fieldValues.preferredName ?? fieldValues.firstName, fieldValues.lastName]
+        .filter((value): value is string => Boolean(value))
+        .join(" ") ||
+      null;
+    const rejectionReason = fieldValues.rejectionReason;
     const userId = matchedUser?.id ?? existingApplication?.user_id ?? null;
     const payload = record.fields;
     const createdAt = new Date(record.createdTime).toISOString();
@@ -228,29 +255,23 @@ export async function syncAirtableApplicationsToPostgres(
         UPDATE applications
         SET user_id = ${userId},
             status = ${status},
-            name = ${getApplicationName(record)},
-            applicant_email = ${getStringField(record, "email")},
-            applicant_slack_id = ${getStringField(record, "slackId")},
+            name = ${applicationName},
+            applicant_email = ${fieldValues.email},
+            applicant_slack_id = ${fieldValues.slackId},
             applicant_hca_id = ${matchedUser?.hca_id ?? null},
-            applicant_phone = ${getStringField(record, "phone")},
-            date_of_birth = ${getStringField(record, "birthdate")},
-            address_line_1 = ${getStringField(record, "addressLine1")},
-            address_line_2 = ${getStringField(record, "addressLine2")},
-            address_city = ${getStringField(record, "addressCity")},
-            address_state = ${getStringField(record, "addressState")},
-            address_zip = ${getStringField(record, "addressZip")},
-            address_country = ${getStringField(record, "addressCountry")},
-            github_url = ${getStringField(record, "githubUrl")},
-            portfolio_url = ${getStringField(record, "portfolioUrl")},
-            application_first_thing_do = ${getStringField(
-              record,
-              "applicationFirstThingDo",
-            )},
-            application_best_place_poster = ${getStringField(
-              record,
-              "applicationBestPlacePoster",
-            )},
-            idv_status = ${getStringField(record, "idvStatus")},
+            applicant_phone = ${fieldValues.phone},
+            date_of_birth = ${fieldValues.birthdate},
+            address_line_1 = ${fieldValues.addressLine1},
+            address_line_2 = ${fieldValues.addressLine2},
+            address_city = ${fieldValues.addressCity},
+            address_state = ${fieldValues.addressState},
+            address_zip = ${fieldValues.addressZip},
+            address_country = ${fieldValues.addressCountry},
+            github_url = ${fieldValues.githubUrl},
+            portfolio_url = ${fieldValues.portfolioUrl},
+            application_first_thing_do = ${fieldValues.applicationFirstThingDo},
+            application_best_place_poster = ${fieldValues.applicationBestPlacePoster},
+            idv_status = ${fieldValues.idvStatus},
             rejection_reason = ${rejectionReason},
             decision_note = ${rejectionReason},
             airtable_created_time = ${createdAt},
@@ -300,23 +321,23 @@ export async function syncAirtableApplicationsToPostgres(
         ${crypto.randomUUID()},
         ${userId},
         ${status},
-        ${getApplicationName(record)},
-        ${getStringField(record, "email")},
-        ${getStringField(record, "slackId")},
+        ${applicationName},
+        ${fieldValues.email},
+        ${fieldValues.slackId},
         ${matchedUser?.hca_id ?? null},
-        ${getStringField(record, "phone")},
-        ${getStringField(record, "birthdate")},
-        ${getStringField(record, "addressLine1")},
-        ${getStringField(record, "addressLine2")},
-        ${getStringField(record, "addressCity")},
-        ${getStringField(record, "addressState")},
-        ${getStringField(record, "addressZip")},
-        ${getStringField(record, "addressCountry")},
-        ${getStringField(record, "githubUrl")},
-        ${getStringField(record, "portfolioUrl")},
-        ${getStringField(record, "applicationFirstThingDo")},
-        ${getStringField(record, "applicationBestPlacePoster")},
-        ${getStringField(record, "idvStatus")},
+        ${fieldValues.phone},
+        ${fieldValues.birthdate},
+        ${fieldValues.addressLine1},
+        ${fieldValues.addressLine2},
+        ${fieldValues.addressCity},
+        ${fieldValues.addressState},
+        ${fieldValues.addressZip},
+        ${fieldValues.addressCountry},
+        ${fieldValues.githubUrl},
+        ${fieldValues.portfolioUrl},
+        ${fieldValues.applicationFirstThingDo},
+        ${fieldValues.applicationBestPlacePoster},
+        ${fieldValues.idvStatus},
         ${rejectionReason},
         ${rejectionReason},
         ${record.id},

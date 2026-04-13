@@ -153,24 +153,6 @@ function requireField(fieldName: string, value?: string) {
   return normalized
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function readOptionalString(value: unknown) {
-  return typeof value === "string" ? value : undefined
-}
-
-function readOptionalBoolean(value: unknown) {
-  return typeof value === "boolean" ? value : undefined
-}
-
-function readOptionalStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : undefined
-}
-
 function coerceHackClubAuthAddress(value: unknown): HackClubAuthAddress | null {
   if (typeof value === "string") {
     try {
@@ -180,21 +162,26 @@ function coerceHackClubAuthAddress(value: unknown): HackClubAuthAddress | null {
     }
   }
 
-  if (!isRecord(value)) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null
   }
 
+  const record = Object.entries(value).reduce<Record<string, unknown>>((next, [key, entry]) => {
+    next[key] = entry
+    return next
+  }, {})
+
   return {
-    first_name: readOptionalString(value.first_name),
-    last_name: readOptionalString(value.last_name),
-    line_1: readOptionalString(value.line_1),
-    line_2: readOptionalString(value.line_2),
-    city: readOptionalString(value.city),
-    state: readOptionalString(value.state),
-    postal_code: readOptionalString(value.postal_code),
-    country: readOptionalString(value.country),
-    phone_number: readOptionalString(value.phone_number),
-    primary: readOptionalBoolean(value.primary),
+    first_name: typeof record.first_name === "string" ? record.first_name : undefined,
+    last_name: typeof record.last_name === "string" ? record.last_name : undefined,
+    line_1: typeof record.line_1 === "string" ? record.line_1 : undefined,
+    line_2: typeof record.line_2 === "string" ? record.line_2 : undefined,
+    city: typeof record.city === "string" ? record.city : undefined,
+    state: typeof record.state === "string" ? record.state : undefined,
+    postal_code: typeof record.postal_code === "string" ? record.postal_code : undefined,
+    country: typeof record.country === "string" ? record.country : undefined,
+    phone_number: typeof record.phone_number === "string" ? record.phone_number : undefined,
+    primary: typeof record.primary === "boolean" ? record.primary : undefined,
   }
 }
 
@@ -207,15 +194,28 @@ function unwrapWarehouseOrderResponse(value: unknown): Record<string, unknown> |
     }
   }
 
-  if (!isRecord(value)) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null
   }
 
-  if (isRecord(value.warehouse_order)) {
-    return value.warehouse_order
+  const record = Object.entries(value).reduce<Record<string, unknown>>((next, [key, entry]) => {
+    next[key] = entry
+    return next
+  }, {})
+  const warehouseOrder = record.warehouse_order
+
+  if (
+    typeof warehouseOrder === "object" &&
+    warehouseOrder !== null &&
+    !Array.isArray(warehouseOrder)
+  ) {
+    return Object.entries(warehouseOrder).reduce<Record<string, unknown>>((next, [key, entry]) => {
+      next[key] = entry
+      return next
+    }, {})
   }
 
-  return value
+  return record
 }
 
 export function parseWarehouseOrderResponse(value: unknown): WarehouseOrderResponse | null {
@@ -225,9 +225,10 @@ export function parseWarehouseOrderResponse(value: unknown): WarehouseOrderRespo
     return null
   }
 
-  const id = readOptionalString(payload.id)
-  const status = readOptionalString(payload.status)
-  const recipientEmail = readOptionalString(payload.recipient_email)
+  const id = typeof payload.id === "string" ? payload.id : undefined
+  const status = typeof payload.status === "string" ? payload.status : undefined
+  const recipientEmail =
+    typeof payload.recipient_email === "string" ? payload.recipient_email : undefined
 
   if (!id || !status || !recipientEmail) {
     return null
@@ -236,15 +237,26 @@ export function parseWarehouseOrderResponse(value: unknown): WarehouseOrderRespo
   return {
     id,
     status,
-    tags: readOptionalStringArray(payload.tags) ?? [],
+    tags: Array.isArray(payload.tags)
+      ? payload.tags.filter((item): item is string => typeof item === "string")
+      : [],
     address: coerceHackClubAuthAddress(payload.address),
-    metadata: isRecord(payload.metadata) ? payload.metadata : {},
+    metadata:
+      typeof payload.metadata === "object" &&
+      payload.metadata !== null &&
+      !Array.isArray(payload.metadata)
+        ? Object.entries(payload.metadata).reduce<Record<string, unknown>>((next, [key, entry]) => {
+            next[key] = entry
+            return next
+          }, {})
+        : {},
     recipient_email: recipientEmail,
-    dispatched_at: readOptionalString(payload.dispatched_at),
-    mailed_at: readOptionalString(payload.mailed_at),
-    tracking_number: readOptionalString(payload.tracking_number),
-    carrier: readOptionalString(payload.carrier),
-    service: readOptionalString(payload.service),
+    dispatched_at: typeof payload.dispatched_at === "string" ? payload.dispatched_at : undefined,
+    mailed_at: typeof payload.mailed_at === "string" ? payload.mailed_at : undefined,
+    tracking_number:
+      typeof payload.tracking_number === "string" ? payload.tracking_number : undefined,
+    carrier: typeof payload.carrier === "string" ? payload.carrier : undefined,
+    service: typeof payload.service === "string" ? payload.service : undefined,
     weight:
       typeof payload.weight === "string" || typeof payload.weight === "number"
         ? payload.weight
@@ -261,7 +273,8 @@ export function parseWarehouseOrderResponse(value: unknown): WarehouseOrderRespo
       typeof payload.postage_cost === "string" || typeof payload.postage_cost === "number"
         ? payload.postage_cost
         : undefined,
-    idempotency_key: readOptionalString(payload.idempotency_key),
+    idempotency_key:
+      typeof payload.idempotency_key === "string" ? payload.idempotency_key : undefined,
   }
 }
 
@@ -270,7 +283,7 @@ export function pickPrimaryHackClubAddress(addresses: HackClubAuthAddress[]) {
     .map((address) => coerceHackClubAuthAddress(address))
     .filter((address): address is HackClubAuthAddress => !!address)
 
-  return normalizedAddresses.find((address) => address.primary) ?? normalizedAddresses[0] ?? null
+  return normalizedAddresses.find((address) => address.primary) ?? normalizedAddresses.at(0) ?? null
 }
 
 export function normalizeHackClubAddress(input: WarehouseAddressInput): WarehouseOrderAddress {
@@ -356,10 +369,6 @@ export class WarehouseApiClient {
     return order
   }
 
-  async sendSku(input: SendWarehouseSkuInput) {
-    return this.createOrder(input)
-  }
-
   async getOrder(orderId: string) {
     const response = await this.request<unknown>(
       `/api/v1/warehouse_orders/${encodeURIComponent(orderId)}`,
@@ -378,7 +387,7 @@ export class WarehouseApiClient {
     return order
   }
 
-  private async request<TResult>(path: string, init: WarehouseRequestInit): Promise<TResult> {
+  private async request(path: string, init: WarehouseRequestInit): Promise<unknown> {
     const requestBody =
       init.body === undefined || init.body === null
         ? undefined
@@ -418,11 +427,6 @@ export class WarehouseApiClient {
       })
     }
 
-    return responseBody as TResult
+    return responseBody
   }
-}
-
-export async function sendWarehouseSku(input: SendWarehouseSkuInput) {
-  const client = new WarehouseApiClient()
-  return client.sendSku(input)
 }

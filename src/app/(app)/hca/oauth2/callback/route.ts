@@ -72,7 +72,7 @@ export async function GET(request: Request) {
     null;
   const verificationStatus = userInfo.identity.verification_status;
   const allAddresses = normalizeHackClubAddresses(userInfo.identity.addresses ?? []);
-  const primaryAddress = allAddresses[0] ?? null;
+  const primaryAddress = allAddresses.at(0) ?? null;
   const encryptedAccessToken = encryptHcaAccessToken(tokenData.access_token);
 
   const ip = getRequestIp(request);
@@ -81,12 +81,12 @@ export async function GET(request: Request) {
 
   await ensureSchema();
 
-  const [existingUser] = await sql<{ id: string; ambassador_region: string | null }[]>`
+  const existingUser = (await sql<{ id: string; ambassador_region: string | null }[]>`
     SELECT id, ambassador_region
     FROM users
     WHERE hca_id = ${hcaId}
     LIMIT 1
-  `;
+  `).at(0);
   const wasExistingUser = Boolean(existingUser);
   const detectedAmbassadorRegion =
     resolveDetectedAmbassadorRegion(

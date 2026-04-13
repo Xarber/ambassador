@@ -43,11 +43,6 @@ function hashEmail(email: string) {
   return createHash("sha256").update(email).digest("hex");
 }
 
-function getEmailDomain(email: string) {
-  const [, domain] = email.split("@");
-  return domain || null;
-}
-
 export async function createAuthLoginIntent({
   email,
   source = "auth_page",
@@ -72,7 +67,7 @@ export async function createAuthLoginIntent({
     VALUES (
       ${intentId},
       ${hashEmail(normalizedEmail)},
-      ${getEmailDomain(normalizedEmail)},
+      ${normalizedEmail.split("@")[1] || null},
       ${source}
     )
   `;
@@ -100,7 +95,9 @@ export async function markAuthLoginIntentCompleted({
 
   const normalizedCompletedEmail = completedEmail ? normalizeEmail(completedEmail) : null;
   const completedEmailHash = normalizedCompletedEmail ? hashEmail(normalizedCompletedEmail) : null;
-  const completedEmailDomain = normalizedCompletedEmail ? getEmailDomain(normalizedCompletedEmail) : null;
+  const completedEmailDomain = normalizedCompletedEmail
+    ? normalizedCompletedEmail.split("@")[1] || null
+    : null;
 
   await sql`
     UPDATE auth_login_intents
@@ -123,7 +120,7 @@ export async function getAuthEmailRetentionMetrics({
 } = {}): Promise<AuthEmailRetentionMetrics> {
   await ensureSchema();
 
-  const [row] = await sql<RetentionMetricsRow[]>`
+  const rows = await sql<RetentionMetricsRow[]>`
     WITH intents AS (
       SELECT *
       FROM auth_login_intents
@@ -196,6 +193,7 @@ export async function getAuthEmailRetentionMetrics({
       ROUND(completion_rollup.average_minutes_to_completion)::int::float8 AS average_minutes_to_completion
     FROM completion_rollup
   `;
+  const row = rows.at(0);
 
   return {
     totalIntents: row?.total_intents ?? 0,

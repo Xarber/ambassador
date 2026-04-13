@@ -10,23 +10,23 @@ import type {
 } from "@/lib/posters/types";
 
 async function referralCodeExists(candidate: string) {
-  const [row] = await sql<{ exists: boolean }[]>`
+  const row = (await sql<{ exists: boolean }[]>`
     SELECT EXISTS(
       SELECT 1 FROM posters WHERE referral_code = ${candidate}
     ) AS exists
-  `;
+  `).at(0);
 
-  return row?.exists ?? false;
+  return row?.exists === true;
 }
 
 async function qrTokenExists(candidate: string) {
-  const [row] = await sql<{ exists: boolean }[]>`
+  const row = (await sql<{ exists: boolean }[]>`
     SELECT EXISTS(
       SELECT 1 FROM posters WHERE qr_code_token = ${candidate}
     ) AS exists
-  `;
+  `).at(0);
 
-  return row?.exists ?? false;
+  return row?.exists === true;
 }
 
 function randomFromCharset(charset: string, length: number) {
@@ -184,34 +184,34 @@ export async function listUserPosters(userId: string) {
 }
 
 export async function findPosterForUser(userId: string, posterId: string) {
-  const [poster] = await sql<PosterRow[]>`
+  const poster = (await sql<PosterRow[]>`
     SELECT *
     FROM posters
     WHERE id = ${posterId} AND user_id = ${userId}
     LIMIT 1
-  `;
+  `).at(0);
 
   return poster ?? null;
 }
 
 export async function findPosterGroupForUser(userId: string, groupId: string) {
-  const [group] = await sql<PosterGroupRow[]>`
+  const group = (await sql<PosterGroupRow[]>`
     SELECT *
     FROM poster_groups
     WHERE id = ${groupId} AND user_id = ${userId}
     LIMIT 1
-  `;
+  `).at(0);
 
   return group ?? null;
 }
 
 export async function findPosterByReferralCode(referralCode: string) {
-  const [poster] = await sql<PosterRow[]>`
+  const poster = (await sql<PosterRow[]>`
     SELECT *
     FROM posters
     WHERE referral_code = ${referralCode.toUpperCase()}
     LIMIT 1
-  `;
+  `).at(0);
 
   return poster ?? null;
 }

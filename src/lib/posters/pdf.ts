@@ -87,20 +87,16 @@ export async function generatePosterPdf(options: {
   return Buffer.from(await pdf.save());
 }
 
-export async function generatePosterPdfForRow(poster: PosterRow) {
-  return generatePosterPdf({
-    campaignSlug: poster.campaign_slug,
-    style: poster.poster_type,
-    content: buildPosterReferralUrl(poster.referral_code),
-    referralCode: poster.referral_code,
-  });
-}
-
 export async function generateMergedPosterGroupPdf(posters: PosterRow[]) {
   const merged = await PDFDocument.create();
 
   for (const poster of posters) {
-    const bytes = await generatePosterPdfForRow(poster);
+    const bytes = await generatePosterPdf({
+      campaignSlug: poster.campaign_slug,
+      style: poster.poster_type,
+      content: buildPosterReferralUrl(poster.referral_code),
+      referralCode: poster.referral_code,
+    });
     const single = await PDFDocument.load(bytes);
     const copiedPages = await merged.copyPages(single, single.getPageIndices());
 

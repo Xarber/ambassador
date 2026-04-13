@@ -144,7 +144,20 @@ export default async function AdminOrdersPage({
                   {formatHackClubAddress(order.address) || "-"}
                 </td>
                 <td className="px-5 py-4">
-                  <OrderStatusBadge status={order.status} />
+                  <span
+                    className={pillVariants({
+                      tone:
+                        order.status === ORDER_STATUS_APPROVED
+                          ? "green"
+                          : order.status === ORDER_STATUS_REJECTED ||
+                              order.status === ORDER_STATUS_FAILED ||
+                              order.status === ORDER_STATUS_CANCELLED
+                            ? "red"
+                            : "black",
+                    })}
+                  >
+                    {order.status}
+                  </span>
                   {order.note ? (
                     <p className="mt-2 max-w-xs font-body text-sm text-primary">
                       {order.note}
@@ -186,17 +199,4 @@ export default async function AdminOrdersPage({
       </div>
     </div>
   );
-}
-
-function OrderStatusBadge({ status }: { status: string }) {
-  const tone =
-    status === ORDER_STATUS_APPROVED
-      ? "green"
-      : status === ORDER_STATUS_REJECTED ||
-          status === ORDER_STATUS_FAILED ||
-          status === ORDER_STATUS_CANCELLED
-        ? "red"
-        : "black";
-
-  return <span className={pillVariants({ tone })}>{status}</span>;
 }

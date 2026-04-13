@@ -54,19 +54,19 @@ export function normalizeCampaignSlug(campaignSlug?: string | null) {
   return normalized.slice(start, end) || DEFAULT_POSTER_CAMPAIGN;
 }
 
-function resolveCampaignConfigPath(campaignSlug: string) {
+export function readPosterCampaignConfig(campaignSlug: string): PosterCampaignConfigFile {
+  const normalizedCampaignSlug = normalizeCampaignSlug(campaignSlug);
+  let configPath: string | null = null;
+
   for (const root of posterTemplateRoots()) {
-    const configPath = path.join(root, campaignSlug, "config.json");
-    if (fs.existsSync(configPath)) {
-      return configPath;
+    const candidate = path.join(root, normalizedCampaignSlug, "config.json");
+
+    if (fs.existsSync(candidate)) {
+      configPath = candidate;
+      break;
     }
   }
 
-  return null;
-}
-
-export function readPosterCampaignConfig(campaignSlug: string): PosterCampaignConfigFile {
-  const configPath = resolveCampaignConfigPath(normalizeCampaignSlug(campaignSlug));
   if (!configPath) {
     return {};
   }
@@ -144,12 +144,8 @@ export function getPosterRenderConfig(
   };
 }
 
-export function getPosterPublicBaseUrl() {
-  return optionalEnv("CURRENT_DOMAIN") ?? DEFAULT_CURRENT_DOMAIN;
-}
-
 export function buildPosterReferralUrl(referralCode: string) {
-  return `${getPosterPublicBaseUrl()}/p/${encodeURIComponent(referralCode)}`;
+  return `${optionalEnv("CURRENT_DOMAIN") ?? DEFAULT_CURRENT_DOMAIN}/p/${encodeURIComponent(referralCode)}`;
 }
 
 export type PosterCampaignSummary = {
@@ -207,7 +203,8 @@ export function buildPosterRedirectUrl(referralCode: string, campaignSlug: strin
   const target = new URL(
     config.redirectBaseUrl ??
       optionalEnv("POSTER_REDIRECT_BASE_URL") ??
-      getPosterPublicBaseUrl(),
+      optionalEnv("CURRENT_DOMAIN") ??
+      DEFAULT_CURRENT_DOMAIN,
   );
   target.searchParams.set("ref", referralCode);
   return target.toString();

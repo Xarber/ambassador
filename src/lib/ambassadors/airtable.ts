@@ -1,65 +1,34 @@
-import { AirtableClient, AirtableError } from "@/lib/airtable";
+import { AirtableClient, AirtableError, createAirtableClient } from "@/lib/airtable";
 import {
+  getAirtableApplicationFieldId,
   getAirtableApplicationsTableId,
-  getAirtableBaseId,
 } from "@/lib/applications/airtable";
-
-const DEFAULT_AIRTABLE_AMBASSADORS_TABLE_ID = "tblo8106uaVFMWyXk";
-
-const ambassadorFieldCandidates = ["ambassadors", "ambassador"];
-const onboardingCompleteFieldCandidates = [
-  "onboarding_complete",
-  "onboarding complete",
-  "onboardingComplete",
-];
-const tshirtSentFieldCandidates = ["tshirt-sent", "tshirt_sent", "T-Shirt Sent"];
+import {
+  getAirtableBaseId,
+  getAirtableFieldId,
+  getAirtableFieldValue,
+  getAirtableTableId,
+} from "@/lib/airtable-schema";
 
 function getAirtableAmbassadorsClient() {
-  const token = process.env.AIRTABLE_PAT?.trim();
-
-  if (!token) return null;
-
-  return new AirtableClient({
-    baseId: getAirtableBaseId(),
-    token,
-  });
+  return createAirtableClient(getAirtableBaseId());
 }
 
 export function getAirtableAmbassadorsTableId() {
-  return (
-    process.env.AIRTABLE_AMBASSADORS_TABLE_ID?.trim() ||
-    DEFAULT_AIRTABLE_AMBASSADORS_TABLE_ID
-  );
+  return getAirtableTableId("ambassadors");
 }
 
-function normalizeFieldName(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function resolveFieldName(
-  fields: Record<string, unknown>,
-  candidates: readonly string[],
+function getAirtableAmbassadorFieldId(
+  fieldKey: "onboardingComplete" | "tshirtSent",
 ) {
-  const availableFieldNames = Object.keys(fields);
-  const normalizedFieldNames = new Map(
-    availableFieldNames.map((fieldName) => [normalizeFieldName(fieldName), fieldName]),
-  );
-
-  for (const candidate of candidates) {
-    const exactMatch = availableFieldNames.find((fieldName) => fieldName === candidate);
-    if (exactMatch) return exactMatch;
-
-    const normalizedMatch = normalizedFieldNames.get(normalizeFieldName(candidate));
-    if (normalizedMatch) return normalizedMatch;
-  }
-
-  return null;
+  return getAirtableFieldId("ambassadors", fieldKey);
 }
 
-function getLinkedRecordIds(value: unknown) {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+function getAirtableAmbassadorFieldValue(
+  fields: Record<string, unknown>,
+  fieldKey: "onboardingComplete",
+) {
+  return getAirtableFieldValue(fields, "ambassadors", fieldKey);
 }
 
 async function getRecordById(
@@ -68,7 +37,9 @@ async function getRecordById(
   recordId: string,
 ) {
   try {
-    return await client.getRecord<Record<string, unknown>>(tableId, recordId);
+    return await client.getRecord<Record<string, unknown>>(tableId, recordId, {
+      returnFieldsByFieldId: true,
+    });
   } catch (error) {
     if (error instanceof AirtableError && error.status === 404) {
       return null;
@@ -88,13 +59,11 @@ function getAmbassadorRecordIdsFromApplicationPayload(payload: unknown) {
     return [];
   }
 
-  const ambassadorFieldName = resolveFieldName(
-    payload as Record<string, unknown>,
-    ambassadorFieldCandidates,
-  );
+  const fields = payload as Record<string, unknown>;
+  const linkedRecordIds = fields[getAirtableApplicationFieldId("ambassadors")] ?? fields.ambassadors;
 
-  return ambassadorFieldName
-    ? getLinkedRecordIds((payload as Record<string, unknown>)[ambassadorFieldName])
+  return Array.isArray(linkedRecordIds)
+    ? linkedRecordIds.filter((item): item is string => typeof item === "string" && item.length > 0)
     : [];
 }
 
@@ -190,14 +159,7 @@ export async function getAmbassadorOnboardingStatus(input: {
   }
 
   const onboardingComplete = ambassadorRecords.some((record) => {
-    const onboardingCompleteFieldName = resolveFieldName(
-      record.fields,
-      onboardingCompleteFieldCandidates,
-    );
-
-    return onboardingCompleteFieldName
-      ? Boolean(record.fields[onboardingCompleteFieldName])
-      : false;
+    return Boolean(getAirtableAmbassadorFieldValue(record.fields, "onboardingComplete"));
   });
 
   return {
@@ -228,15 +190,8 @@ export async function syncAmbassadorTshirtSentToAirtable(input: {
   await Promise.all(
     ambassadorRecordIds.map(async (recordId) => {
       try {
-        const record = await getRecordById(client, getAirtableAmbassadorsTableId(), recordId);
-
-        if (!record) return;
-
-        const tshirtSentFieldName = resolveFieldName(record.fields, tshirtSentFieldCandidates)
-          ?? tshirtSentFieldCandidates[0];
-
-        await client.updateRecord(getAirtableAmbassadorsTableId(), record.id, {
-          [tshirtSentFieldName]: input.sent,
+        await client.updateRecord(getAirtableAmbassadorsTableId(), recordId, {
+          [getAirtableAmbassadorFieldId("tshirtSent")]: input.sent,
         });
         updatedCount += 1;
       } catch (error) {

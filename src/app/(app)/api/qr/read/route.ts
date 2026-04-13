@@ -5,7 +5,7 @@ import {
   requirePosterSession,
   validateImageUpload,
 } from "@/lib/posters/http";
-import { readPosterQrCodes } from "@/lib/posters/service";
+import { readQrCodesFromImageBuffer } from "@/lib/posters/qr";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       return jsonError(fileValidation.message, fileValidation.status);
     }
 
-    const results = await readPosterQrCodes(file);
+    const results = await readQrCodesFromImageBuffer(Buffer.from(await file.arrayBuffer()));
     return Response.json({ results, count: results.length });
   } catch (error) {
     return posterErrorResponse(error, "Failed to read QR codes.");

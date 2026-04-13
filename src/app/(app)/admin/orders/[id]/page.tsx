@@ -81,7 +81,7 @@ export default async function AdminOrderDetailPage({
   if (!order) notFound();
 
   const redirectTo = `/admin/orders/${order.id}`;
-  const warehousePayload = parseWarehouseOrderPayload(order.warehouse_payload);
+  const warehousePayload = parseWarehouseOrderResponse(order.warehouse_payload);
   const addressString =
     formatHackClubAddress(order.address) ||
     formatHackClubAddress(warehousePayload?.address) ||
@@ -132,7 +132,20 @@ export default async function AdminOrderDetailPage({
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <OrderStatusBadge status={order.status} />
+              <span
+                className={pillVariants({
+                  tone:
+                    order.status === ORDER_STATUS_APPROVED
+                      ? "green"
+                      : order.status === ORDER_STATUS_REJECTED ||
+                          order.status === ORDER_STATUS_FAILED ||
+                          order.status === ORDER_STATUS_CANCELLED
+                        ? "red"
+                        : "black",
+                })}
+              >
+                {order.status}
+              </span>
             </div>
           </div>
           {order.user_id ? (
@@ -328,21 +341,4 @@ export default async function AdminOrderDetailPage({
       </DetailSection>
     </div>
   );
-}
-
-function OrderStatusBadge({ status }: { status: string }) {
-  const tone =
-    status === ORDER_STATUS_APPROVED
-      ? "green"
-      : status === ORDER_STATUS_REJECTED ||
-          status === ORDER_STATUS_FAILED ||
-          status === ORDER_STATUS_CANCELLED
-        ? "red"
-        : "black";
-
-  return <span className={pillVariants({ tone })}>{status}</span>;
-}
-
-function parseWarehouseOrderPayload(value: unknown) {
-  return parseWarehouseOrderResponse(value);
 }

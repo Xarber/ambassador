@@ -102,29 +102,33 @@ export default async function DashboardPage({
     searchParams,
   ]);
 
-  const [[application], [user], [existingOrderRow]] = await Promise.all([
+  const [application, user, existingOrderRow] = await Promise.all([
     sql<ApplicationRow[]>`
       SELECT id, status, name, created_at, airtable_record_id, airtable_payload
       FROM applications WHERE user_id = ${session.sub}
       ORDER BY created_at DESC LIMIT 1
-    `,
+    `.then((rows) => rows.at(0) ?? null),
     sql<UserRow[]>`
       SELECT balance_cents, is_admin, ambassador_region, hca_country, country_name, country_code,
              hca_addresses, hca_access_token, manual_dashboard_state
       FROM users WHERE id = ${session.sub}
-    `,
+    `.then((rows) => rows.at(0) ?? null),
     sql<ShirtOrderRow[]>`
       SELECT id, status, variant, warehouse_order_id, warehouse_payload, note
       FROM orders
       WHERE user_id = ${session.sub} AND sku LIKE ${`${SHIRT_SKU_PREFIX}%`}
       ORDER BY created_at DESC, id DESC
       LIMIT 1
-    `,
+    `.then((rows) => rows.at(0) ?? null),
   ]);
+
+  if (!user) {
+    redirect("/");
+  }
 
   const canUseShirts = canAccessShirts({
     latestApplicationStatus: application?.status ?? null,
-    manualDashboardState: user?.manual_dashboard_state ?? null,
+    manualDashboardState: user.manual_dashboard_state,
   });
   const shirtOnboardingStatus = canUseShirts
     ? await getAmbassadorOnboardingStatus({
@@ -139,12 +143,12 @@ export default async function DashboardPage({
   const shouldLoadShirtAddresses = canUseShirts && !shirtRequiresOnboarding;
   let shirtNeedsAddressRefresh = false;
   let shirtAddresses: HackClubAddress[] = [];
-  const hcaAccessToken = readHcaAccessToken(user?.hca_access_token ?? null);
+  const hcaAccessToken = readHcaAccessToken(user.hca_access_token);
 
   if (shouldLoadShirtAddresses) {
     const addressState = await loadUserHackClubAddresses({
       userId: session.sub,
-      storedAddresses: user?.hca_addresses ?? [],
+      storedAddresses: user.hca_addresses,
       accessToken: hcaAccessToken,
     });
 
@@ -176,7 +180,7 @@ export default async function DashboardPage({
     onboardingFormUrl: "https://forms.hackclub.com/t/mJvXsYY41Lus",
   };
 
-  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user?.is_admin ?? session.isAdmin);
+  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user.is_admin ?? session.isAdmin);
   const canUseSelector = canShowDevAdminSelector(canAccessAdmin);
   const stateInput = {
     application,
@@ -188,8 +192,8 @@ export default async function DashboardPage({
     canUseShirts,
   };
   const baseResolved = resolveState({ ...stateInput, activeDevState: null });
-  const selectedDevState = devState && isDevState(devState) ? devState : null;
-  const resolved = canUseSelector && selectedDevState
+  const selectedDevState = isDevState(devState) ? devState : null;
+  const resolved = canUseSelector && selectedDevState !== null
     ? resolveState({ ...stateInput, activeDevState: selectedDevState })
     : baseResolved;
 
@@ -197,10 +201,10 @@ export default async function DashboardPage({
     <main className="page-shell">
       <Navbar
         isAdmin={canAccessAdmin}
-        balanceCents={user?.balance_cents ?? 0}
+        balanceCents={user.balance_cents ?? 0}
         showPostersLink={canAccessPosters({
           latestApplicationStatus: application?.status ?? null,
-          manualDashboardState: user?.manual_dashboard_state ?? null,
+          manualDashboardState: user.manual_dashboard_state,
         })}
       />
       <div className="mx-auto max-w-3xl px-6 py-12">
@@ -241,16 +245,16 @@ function resolveState({
   canUseShirts,
 }: {
   activeDevState: DevState | null;
-  application: { status: string; created_at: string } | undefined;
+  application: { status: string; created_at: string } | null;
   user:
     | {
-        ambassador_region?: string | null;
-        hca_country?: string | null;
-        country_name?: string | null;
-        country_code?: string | null;
-        manual_dashboard_state?: string | null;
+        ambassador_region: string | null;
+        hca_country: string | null;
+        country_name: string | null;
+        country_code: string | null;
+        manual_dashboard_state: string | null;
       }
-    | undefined;
+    | null;
   locale: string;
   fakeDate: string;
   t: DashboardTranslations;
@@ -360,6 +364,8 @@ function resolveState({
   } satisfies Record<Exclude<DevState, "pending">, ResolvedState>;
 
   switch (activeDevState) {
+    case null:
+      break;
     case "ineligible":
     case "pending-checks":
     case "approved":
@@ -379,10 +385,10 @@ function resolveState({
   }
 
   const resolvedRegion = resolveAmbassadorRegion(
-    user?.ambassador_region ?? null,
-    user?.hca_country ?? null,
-    user?.country_name ?? null,
-    user?.country_code ?? null,
+    user?.ambassador_region,
+    user?.hca_country,
+    user?.country_name,
+    user?.country_code,
   );
   const manualDashboardStateValue = user?.manual_dashboard_state ?? null;
   const manualDashboardState = isUserManualDashboardState(manualDashboardStateValue)

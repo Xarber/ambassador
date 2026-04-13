@@ -44,10 +44,10 @@ async function signTokenWithExpiry(
     .sign(SECRET);
 }
 
-async function verifyJwt<T>(token: string): Promise<T | null> {
+async function verifyJwt(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return payload as T;
+    return payload;
   } catch {
     return null;
   }
@@ -58,7 +58,25 @@ export async function createToken(payload: TokenPayload): Promise<string> {
 }
 
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
-  return verifyJwt<TokenPayload>(token);
+  const payload = await verifyJwt(token);
+  if (
+    !payload ||
+    typeof payload.sub !== "string" ||
+    typeof payload.displayName !== "string" ||
+    typeof payload.isAdmin !== "boolean" ||
+    (payload.email !== undefined && typeof payload.email !== "string") ||
+    (payload.slackId !== undefined && typeof payload.slackId !== "string")
+  ) {
+    return null;
+  }
+
+  return {
+    sub: payload.sub,
+    email: payload.email,
+    displayName: payload.displayName,
+    slackId: payload.slackId,
+    isAdmin: payload.isAdmin,
+  };
 }
 
 export async function createImpersonationToken(payload: {
@@ -80,13 +98,52 @@ export async function createImpersonationToken(payload: {
 export async function verifyImpersonationToken(
   token: string,
 ): Promise<ImpersonationTokenPayload | null> {
-  const payload = await verifyJwt<ImpersonationTokenPayload>(token);
+  const payload = await verifyJwt(token);
+  const actor = payload?.actor;
+  const subject = payload?.subject;
 
-  if (!payload || payload.type !== "impersonation") {
+  if (
+    !payload ||
+    payload.type !== "impersonation" ||
+    typeof payload.startedAt !== "string" ||
+    typeof actor !== "object" ||
+    actor === null ||
+    Array.isArray(actor) ||
+    typeof actor.sub !== "string" ||
+    typeof actor.displayName !== "string" ||
+    typeof actor.isAdmin !== "boolean" ||
+    (actor.email !== undefined && typeof actor.email !== "string") ||
+    (actor.slackId !== undefined && typeof actor.slackId !== "string") ||
+    typeof subject !== "object" ||
+    subject === null ||
+    Array.isArray(subject) ||
+    typeof subject.sub !== "string" ||
+    typeof subject.displayName !== "string" ||
+    typeof subject.isAdmin !== "boolean" ||
+    (subject.email !== undefined && typeof subject.email !== "string") ||
+    (subject.slackId !== undefined && typeof subject.slackId !== "string")
+  ) {
     return null;
   }
 
-  return payload;
+  return {
+    type: "impersonation",
+    actor: {
+      sub: actor.sub,
+      email: actor.email,
+      displayName: actor.displayName,
+      slackId: actor.slackId,
+      isAdmin: actor.isAdmin,
+    },
+    subject: {
+      sub: subject.sub,
+      email: subject.email,
+      displayName: subject.displayName,
+      slackId: subject.slackId,
+      isAdmin: subject.isAdmin,
+    },
+    startedAt: payload.startedAt,
+  };
 }
 
 export async function setSession(token: string) {
@@ -136,12 +193,12 @@ export async function getSession(): Promise<SessionPayload | null> {
     return actorSession;
   }
 
-  const [actorUser] = await sql<{ is_admin: boolean | null }[]>`
+  const actorUser = (await sql<{ is_admin: boolean | null }[]>`
     SELECT is_admin
     FROM users
     WHERE id = ${actorSession.sub}
     LIMIT 1
-  `;
+  `).at(0);
 
   if (!actorUser?.is_admin || impersonation.actor.sub !== actorSession.sub) {
     return actorSession;

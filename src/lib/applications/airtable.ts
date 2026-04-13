@@ -1,16 +1,22 @@
-import { AirtableClient, AirtableError } from "@/lib/airtable";
+import {
+  AirtableError,
+  AirtableRecord,
+  createAirtableClient,
+} from "@/lib/airtable";
+import {
+  type ApplicationFieldKey,
+  getAirtableBaseId,
+  getAirtableFieldId,
+  getAirtableFieldValue,
+  getAirtableTableId,
+} from "@/lib/airtable-schema";
 import {
   APPLICATION_STATUS_ACCEPTED,
   type ApplicationStatus,
 } from "@/lib/applications/status";
 
 export type AirtableApplicationFields = Record<string, unknown>;
-
-export type AirtableApplicationRecord = {
-  id: string;
-  createdTime: string;
-  fields: AirtableApplicationFields;
-};
+export type AirtableApplicationRecord = AirtableRecord<AirtableApplicationFields>;
 
 type ApplicationReviewSyncInput = {
   airtableRecordId?: string | null;
@@ -18,122 +24,27 @@ type ApplicationReviewSyncInput = {
   note?: string | null;
 };
 
-type TShirtSyncInput = {
-  airtableRecordId?: string | null;
-  shipped: boolean;
-};
-
 type AirtableReadOptions = {
   signal?: AbortSignal;
 };
 
-const DEFAULT_AIRTABLE_BASE_ID = "appwKApaCZvoa60hI";
-const DEFAULT_AIRTABLE_APPLICATIONS_TABLE_ID = "tblnA85coBmjWawcN";
-
-const applicationFieldCandidates = {
-  status: ["status", "Status"],
-  rejectionReason: ["rejection_reason", "Rejection Reason", "rejection reason"],
-  tshirtShipped: ["tshirt-shipped", "tshirt_shipped", "T-Shirt Shipped"],
-  name: ["name", "Name"],
-  preferredName: ["preferred_name", "Preferred Name", "preferred name"],
-  firstName: ["first_name", "First Name", "first name"],
-  lastName: ["last_name", "Last Name", "last name"],
-  email: ["email", "Email"],
-  slackId: ["slack_id", "Slack ID", "slack id"],
-  birthdate: ["birthdate", "Birthdate", "Date of Birth"],
-  addressLine1: ["address_line_1", "Address line 1"],
-  addressLine2: ["address_line_2", "Address line 2"],
-  addressCity: ["address_city", "City"],
-  addressState: ["address_state", "State"],
-  addressZip: ["address_zip", "ZIP", "Postal Code"],
-  addressCountry: ["address_country", "Country"],
-  phone: ["phone", "Phone"],
-  githubUrl: ["github_url", "GitHub URL", "GitHub"],
-  portfolioUrl: ["portfolio_url", "Portfolio URL", "Portfolio"],
-  applicationFirstThingDo: [
-    "application_first_thing_do",
-    "Application First Thing Do",
-  ],
-  applicationBestPlacePoster: [
-    "application_best_place_poster",
-    "Application Best Place Poster",
-  ],
-  idvStatus: ["idv_status", "IDV Status", "idv status"],
-} as const;
-
-type ApplicationFieldKey = keyof typeof applicationFieldCandidates;
-
 function getAirtableApplicationsClient() {
-  const token = process.env.AIRTABLE_PAT?.trim();
-
-  if (!token) return null;
-
-  return new AirtableClient({
-    baseId: getAirtableBaseId(),
-    token,
-  });
-}
-
-export function getAirtableBaseId() {
-  return process.env.AIRTABLE_BASE_ID?.trim() || DEFAULT_AIRTABLE_BASE_ID;
+  return createAirtableClient(getAirtableBaseId());
 }
 
 export function getAirtableApplicationsTableId() {
-  return (
-    process.env.AIRTABLE_APPLICATIONS_TABLE_ID?.trim() ||
-    DEFAULT_AIRTABLE_APPLICATIONS_TABLE_ID
-  );
+  return getAirtableTableId("applications");
 }
 
-function normalizeFieldName(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+export function getAirtableApplicationFieldId(fieldKey: ApplicationFieldKey) {
+  return getAirtableFieldId("applications", fieldKey);
 }
 
-export function resolveApplicationFieldName(
+export function getAirtableApplicationFieldValue(
   fields: Record<string, unknown>,
   key: ApplicationFieldKey,
 ) {
-  const availableFieldNames = Object.keys(fields);
-  const normalizedFieldNames = new Map(
-    availableFieldNames.map((fieldName) => [normalizeFieldName(fieldName), fieldName]),
-  );
-
-  for (const candidate of applicationFieldCandidates[key]) {
-    const exactMatch = availableFieldNames.find((fieldName) => fieldName === candidate);
-    if (exactMatch) return exactMatch;
-
-    const normalizedMatch = normalizedFieldNames.get(normalizeFieldName(candidate));
-    if (normalizedMatch) return normalizedMatch;
-  }
-
-  return null;
-}
-
-function resolveWritableApplicationFieldName(
-  fields: Record<string, unknown>,
-  key: ApplicationFieldKey,
-) {
-  return resolveApplicationFieldName(fields, key) ?? applicationFieldCandidates[key][0];
-}
-
-async function getRecordById(
-  client: AirtableClient,
-  recordId: string,
-  options: AirtableReadOptions = {},
-) {
-  try {
-    return await client.getRecord<Record<string, unknown>>(
-      getAirtableApplicationsTableId(),
-      recordId,
-      options,
-    );
-  } catch (error) {
-    if (error instanceof AirtableError && error.status === 404) {
-      return null;
-    }
-
-    throw error;
-  }
+  return getAirtableFieldValue(fields, "applications", key);
 }
 
 export async function listAirtableApplicationRecords(options: AirtableReadOptions = {}) {
@@ -150,9 +61,12 @@ export async function listAirtableApplicationRecords(options: AirtableReadOption
       {
         offset,
         pageSize: 100,
-        sort: [{ field: "id", direction: "asc" }],
+        sort: [{ field: getAirtableApplicationFieldId("id"), direction: "asc" }],
       },
-      options,
+      {
+        ...options,
+        returnFieldsByFieldId: true,
+      },
     );
 
     records.push(...response.records);
@@ -160,29 +74,6 @@ export async function listAirtableApplicationRecords(options: AirtableReadOption
   } while (offset);
 
   return records;
-}
-
-function buildReviewFields(
-  record: AirtableApplicationRecord,
-  input: ApplicationReviewSyncInput,
-) {
-  const statusFieldName = resolveWritableApplicationFieldName(record.fields, "status");
-  const rejectionReasonFieldName = resolveWritableApplicationFieldName(
-    record.fields,
-    "rejectionReason",
-  );
-
-  return {
-    ...(statusFieldName ? { [statusFieldName]: input.status } : {}),
-    ...(rejectionReasonFieldName
-      ? {
-          [rejectionReasonFieldName]:
-            input.status === APPLICATION_STATUS_ACCEPTED
-              ? null
-              : input.note?.trim() || null,
-        }
-      : {}),
-  };
 }
 
 export async function syncApplicationReviewDecisionToAirtable(
@@ -193,54 +84,22 @@ export async function syncApplicationReviewDecisionToAirtable(
 
   if (!client || !recordId) return null;
 
-  const record = await getRecordById(client, recordId);
+  try {
+    await client.updateRecord(getAirtableApplicationsTableId(), recordId, {
+      [getAirtableApplicationFieldId("status")]: input.status,
+      [getAirtableApplicationFieldId("rejectionReason")]:
+        input.status === APPLICATION_STATUS_ACCEPTED ? null : input.note?.trim() || null,
+    });
+  } catch (error) {
+    if (error instanceof AirtableError && error.status === 404) {
+      throw new Error(`Unable to find Airtable application record ${recordId}`);
+    }
 
-  if (!record) {
-    throw new Error(`Unable to find Airtable application record ${recordId}`);
-  }
-
-  const reviewFields = buildReviewFields(record, input);
-
-  if (Object.keys(reviewFields).length > 0) {
-    await client.updateRecord(getAirtableApplicationsTableId(), record.id, reviewFields);
+    throw error;
   }
 
   return {
-    recordId: record.id,
-    syncedAt: new Date(),
-  };
-}
-
-export async function syncApplicationTshirtShippedToAirtable(input: TShirtSyncInput) {
-  const client = getAirtableApplicationsClient();
-  const recordId = input.airtableRecordId?.trim();
-
-  if (!client || !recordId) return null;
-
-  const record = await getRecordById(client, recordId);
-
-  if (!record) {
-    throw new Error(`Unable to find Airtable application record ${recordId}`);
-  }
-
-  const tshirtShippedFieldName = resolveWritableApplicationFieldName(
-    record.fields,
-    "tshirtShipped",
-  );
-
-  if (!tshirtShippedFieldName) {
-    return {
-      recordId: record.id,
-      syncedAt: new Date(),
-    };
-  }
-
-  await client.updateRecord(getAirtableApplicationsTableId(), record.id, {
-    [tshirtShippedFieldName]: input.shipped,
-  });
-
-  return {
-    recordId: record.id,
+    recordId,
     syncedAt: new Date(),
   };
 }

@@ -4,7 +4,6 @@ import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getSession } from "@/lib/session";
 
 export { getRequestIp, isSameOriginRequest };
-const MAX_IMAGE_UPLOAD_BYTES = 10485760;
 
 export class PosterRequestError extends Error {
   constructor(
@@ -111,7 +110,7 @@ export function validateImageUpload(file: File) {
     return { message: "An image file is required.", status: 400 };
   }
 
-  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+  if (file.size > 10_485_760) {
     return { message: "Image file is too large.", status: 413 };
   }
 

@@ -3,7 +3,7 @@ import {
   buildPosterReferralUrl,
   normalizeCampaignSlug,
 } from "@/lib/posters/config";
-import { generateMergedPosterGroupPdf, generatePosterPdfForRow } from "@/lib/posters/pdf";
+import { generateMergedPosterGroupPdf, generatePosterPdf } from "@/lib/posters/pdf";
 import {
   createPoster,
   createPosterGroup,
@@ -79,10 +79,6 @@ async function persistPosterDecision(input: {
     await deletePosterProofFile(stored.key);
     throw error;
   }
-}
-
-async function detectQrCodes(file: File) {
-  return readQrCodesFromImageBuffer(Buffer.from(await file.arrayBuffer()));
 }
 
 export async function listPosterDataForUser(userId: string) {
@@ -181,7 +177,12 @@ export async function getPosterPdfForUser(userId: string, posterId: string) {
   const poster = await getPosterForUserOrThrow(userId, posterId);
   return {
     poster,
-    pdf: await generatePosterPdfForRow(poster),
+    pdf: await generatePosterPdf({
+      campaignSlug: poster.campaign_slug,
+      style: poster.poster_type,
+      content: buildPosterReferralUrl(poster.referral_code),
+      referralCode: poster.referral_code,
+    }),
   };
 }
 
@@ -205,7 +206,9 @@ export async function submitPosterProof(input: SubmitPosterProofInput): Promise<
     throw new PosterRequestError("Precise location is required to submit proof.", 400);
   }
 
-  const detectedQrCodes = await detectQrCodes(input.file);
+  const detectedQrCodes = await readQrCodesFromImageBuffer(
+    Buffer.from(await input.file.arrayBuffer()),
+  );
 
   const currentPosterMatches = findMatchingPoster(detectedQrCodes, [poster]);
 
@@ -314,7 +317,9 @@ export async function scanPosterGroupProof(input: {
 }): Promise<ScanMatchResult> {
   const { posters } = await getPosterGroupForUserOrThrow(input.userId, input.groupId);
   const pendingGroupPosters = posters.filter((poster) => poster.verification_status === "pending");
-  const detectedQrCodes = await detectQrCodes(input.file);
+  const detectedQrCodes = await readQrCodesFromImageBuffer(
+    Buffer.from(await input.file.arrayBuffer()),
+  );
 
   if (detectedQrCodes.length === 0) {
     return {
@@ -393,7 +398,9 @@ export async function scanAnyUserPoster(input: {
   locationAccuracy?: number | null;
 }): Promise<ScanMatchResult> {
   const posters = await getUserPendingPosters(input.userId);
-  const detectedQrCodes = await detectQrCodes(input.file);
+  const detectedQrCodes = await readQrCodesFromImageBuffer(
+    Buffer.from(await input.file.arrayBuffer()),
+  );
 
   if (detectedQrCodes.length === 0) {
     return {
@@ -421,10 +428,6 @@ export async function scanAnyUserPoster(input: {
     longitude: input.longitude,
     locationAccuracy: input.locationAccuracy ?? null,
   });
-}
-
-export async function readPosterQrCodes(file: File) {
-  return detectQrCodes(file);
 }
 
 export async function resolvePublicPosterScan(code: string, requestInfo: {

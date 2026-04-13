@@ -18,7 +18,7 @@ import {
 } from "@/lib/shop";
 import {
   parseWarehouseOrderResponse,
-  sendWarehouseSku,
+  WarehouseApiClient,
   WarehouseApiError,
 } from "@/lib/warehouse";
 
@@ -101,7 +101,7 @@ export async function POST(
         WHERE id = ${id}
       `;
     } else {
-      const result = await sendWarehouseSku({
+      const result = await new WarehouseApiClient().createOrder({
         sku: order.sku,
         quantity: 1,
         name: order.display_name,

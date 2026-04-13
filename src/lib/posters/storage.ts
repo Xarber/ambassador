@@ -14,7 +14,8 @@ export type StoredProof = {
 const projectRoot = /* turbopackIgnore: true */ process.cwd();
 
 function getStorageDriver(): StorageDriver {
-  return (optionalEnv("STORAGE_DRIVER") as StorageDriver | null) ?? "local";
+  const configured = optionalEnv("STORAGE_DRIVER");
+  return configured === "local" || configured === "r2" ? configured : "local";
 }
 
 function getLfsRoot() {
@@ -127,10 +128,13 @@ async function readRemote(key: string): Promise<Buffer> {
   if (!body) {
     throw new Error(`No body returned for proof ${key}`);
   }
+  if (typeof body !== "object" || !(Symbol.asyncIterator in body)) {
+    throw new Error(`Unsupported proof body returned for ${key}`);
+  }
 
   const chunks: Uint8Array[] = [];
   for await (const chunk of body as AsyncIterable<Uint8Array>) {
-    chunks.push(chunk as Uint8Array);
+    chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }

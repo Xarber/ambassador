@@ -1,0 +1,188 @@
+base:
+  id: appwKApaCZvoa60hI
+tables:
+  applications:
+    id: tblnA85coBmjWawcN
+    name: application
+    primaryField:
+      id: fldBPxJp51KXdF8in
+      name: id
+    views:
+      grid:
+        id: viwqKpDdL2p812rKF
+        name: Grid view
+      kanban:
+        id: viwRwnaDnKjIx5oLG
+        name: Kanban
+    fields:
+      id:
+        id: fldBPxJp51KXdF8in
+        name: id
+      status:
+        id: fldQInPA1o0BcHwr6
+        name: status
+      rejectionReason:
+        id: fld4bgPB2wiAIYASt
+        name: rejection_reason
+      preferredName:
+        id: fldPUVbFcUEdGAlpl
+        name: preferred_name
+      firstName:
+        id: fldXVh7LwQcCwKJWd
+        name: first_name
+      lastName:
+        id: fld7Lb4fGXe2Lfqzf
+        name: last_name
+      email:
+        id: fldhpEK1SHarIZU5Y
+        name: email
+      slackId:
+        id: fldrcqG4RJF8HTCsJ
+        name: slack_id
+      birthdate:
+        id: fldg67YKE9kCr6Sg7
+        name: birthdate
+      addressLine1:
+        id: fldbYIrOXoj1KeOsw
+        name: address_line_1
+      addressLine2:
+        id: fldPMSJRp0mE1fQbf
+        name: address_line_2
+      addressCity:
+        id: fld7mmljFN2iItTnf
+        name: address_city
+      addressState:
+        id: fldJGEetNsjpdmzKj
+        name: address_state
+      addressZip:
+        id: fldXUPiorJGFX3aJL
+        name: address_zip
+      addressCountry:
+        id: fldclXsyjGufKoiR8
+        name: address_country
+      phone:
+        id: fld9RBstoFgD9E4VT
+        name: phone
+      githubUrl:
+        id: fld3vJNiuFBQYZuX6
+        name: github_url
+      portfolioUrl:
+        id: fldeSRAZEj5DTQ6OB
+        name: portfolio_url
+      applicationFirstThingDo:
+        id: fldsTkd8j5wlveBYF
+        name: application_first_thing_do
+      applicationBestPlacePoster:
+        id: fldRJjGaj5TXJppnC
+        name: application_best_place_poster
+      idvEligible:
+        id: fld8JEs9Ep3ysu6ny
+        name: idv_eligible
+      idvStatus:
+        id: fldvIQLM2UqiAEhqV
+        name: idv_status
+      ambassadors:
+        id: fldZepLFHaQ5aI8pC
+        name: ambassadors
+  ambassadors:
+    id: tblo8106uaVFMWyXk
+    name: ambassadors
+    primaryField:
+      id: fld9MCWcqxB6LPOpB
+      name: id
+    views:
+      grid:
+        id: viw8PqQnPruutt6bN
+        name: Grid view
+    fields:
+      id:
+        id: fld9MCWcqxB6LPOpB
+        name: id
+      preferredName:
+        id: fldsb67d0Mq7bImMZ
+        name: preferred_name
+      firstName:
+        id: fldJZdSDYjv7FZRnK
+        name: first_name
+      lastName:
+        id: fldTzBb8CKjDeTLRq
+        name: last_name
+      email:
+        id: fldZTRwUjWfHN2mXM
+        name: email
+      slackId:
+        id: fld9d6BbKtwVr27av
+        name: slack_id
+      application:
+        id: fldZFEvqzgLS780F5
+        name: application
+      onboarding:
+        id: fldMbYATnggqwYyb3
+        name: onboarding
+      onboardingComplete:
+        id: flde1JpD9Ja4vz4vw
+        name: onboarding_complete
+      hcbEmail:
+        id: fldL7ql2I9fwOjVSm
+        name: hcb_email
+      hcbGrantLink:
+        id: flda4OG7sB3msvOtp
+        name: hcb_grant_link
+      tshirtSent:
+        id: fldD7Pc1jt9VjiAgh
+        name: tshirt-sent
+      syncRoster:
+        id: fld6hAjyhGAMkAddu
+        name: sync-roster
+      headshot:
+        id: fldYRFoe6EYqPW26n
+        name: headshot
+      bio:
+        id: fldtYqZw3z3kRyyD1
+        name: bio
+  onboarding:
+    id: tblqRWF97F8bt59nr
+    name: onboarding
+    primaryField:
+      id: fld0yL094qcJvS77q
+      name: id
+    views:
+      grid:
+        id: viwhzCFZ3Birt1An6
+        name: Grid view
+    fields:
+      id:
+        id: fld0yL094qcJvS77q
+        name: id
+      ambassador:
+        id: fldlBFF40d98gDQIs
+        name: ambassador
+      hcbEmail:
+        id: fldal6PL0uD74PTDn
+        name: hcb_email
+      headshot:
+        id: fldKmT1SKMNvXm6Vf
+        name: headshot
+      bio:
+        id: fldvHxgWhe7ghEmEs
+        name: bio
+  syncRoster:
+    id: tblslMnXrac9C7euL
+    name: sync-roster
+    primaryField:
+      id: fldDCWcVMXY3NmT19
+      name: id
+    views:
+      grid:
+        id: viw3Z7RF26u9rzxVV
+        name: Grid view
+    fields:
+      id:
+        id: fldDCWcVMXY3NmT19
+        name: id
+      ambassador:
+        id: flddPYPIq4tNXcKei
+        name: ambassador
+      email:
+        id: fld4dwW2JkW7KzKMV
+        name: email

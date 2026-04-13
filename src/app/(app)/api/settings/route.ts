@@ -16,24 +16,19 @@ export async function POST(request: Request) {
 
   await ensureUserAddressSchema();
 
-  const body = (await request.json().catch(() => null)) as {
-    ambassadorRegion?: string;
-  } | null;
+  const body: unknown = await request.json().catch(() => null);
 
-  if (!body || typeof body !== "object") {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
 
   const updates: string[] = [];
+  const ambassadorRegionValue = body.ambassadorRegion;
 
-  if (typeof body.ambassadorRegion === "string") {
-    const ambassadorRegion = body.ambassadorRegion.trim();
+  if (typeof ambassadorRegionValue === "string") {
+    const ambassadorRegion = ambassadorRegionValue.trim();
 
-    if (
-      !SUPPORTED_AMBASSADOR_REGIONS.includes(
-        ambassadorRegion as (typeof SUPPORTED_AMBASSADOR_REGIONS)[number],
-      )
-    ) {
+    if (!SUPPORTED_AMBASSADOR_REGIONS.some((region) => region === ambassadorRegion)) {
       return Response.json({ error: "invalid_region" }, { status: 400 });
     }
 

@@ -48,6 +48,9 @@ type AirtableRequestInit = Omit<RequestInit, "body"> & {
 }
 
 type AirtableCallOptions = Pick<RequestInit, "signal">
+type AirtableReadOptions = AirtableCallOptions & {
+  returnFieldsByFieldId?: boolean
+}
 
 function requireAirtablePat() {
   const token = process.env.AIRTABLE_PAT?.trim()
@@ -119,6 +122,17 @@ export function buildAirtableEqualsFormula(fieldName: string, value: string | nu
   return `{${fieldName}}=${escapeAirtableFormulaValue(value)}`
 }
 
+export function createAirtableClient(baseId: string) {
+  const token = process.env.AIRTABLE_PAT?.trim()
+
+  if (!token) return null
+
+  return new AirtableClient({
+    baseId,
+    token,
+  })
+}
+
 export class AirtableClient {
   private readonly baseId: string
   private readonly token: string
@@ -133,8 +147,9 @@ export class AirtableClient {
   async listRecords<TFields extends Record<string, unknown>>(
     table: string,
     options: AirtableListOptions = {},
-    requestOptions: AirtableCallOptions = {},
+    requestOptions: AirtableReadOptions = {},
   ) {
+    const { returnFieldsByFieldId, ...callOptions } = requestOptions
     const query = new URLSearchParams()
 
     if (options.view) query.set("view", options.view)
@@ -142,6 +157,7 @@ export class AirtableClient {
     if (options.pageSize) query.set("pageSize", String(options.pageSize))
     if (options.filterByFormula) query.set("filterByFormula", options.filterByFormula)
     if (options.offset) query.set("offset", options.offset)
+    if (returnFieldsByFieldId) query.set("returnFieldsByFieldId", "true")
 
     options.fields?.forEach((field) => query.append("fields[]", field))
     options.sort?.forEach((sort, index) => {
@@ -153,19 +169,24 @@ export class AirtableClient {
       method: "GET",
       query,
       cache: "no-store",
-      ...requestOptions,
+      ...callOptions,
     })
   }
 
   async getRecord<TFields extends Record<string, unknown>>(
     table: string,
     recordId: string,
-    requestOptions: AirtableCallOptions = {},
+    requestOptions: AirtableReadOptions = {},
   ) {
+    const { returnFieldsByFieldId, ...callOptions } = requestOptions
+
     return this.request<AirtableRecord<TFields>>(`${table}/${recordId}`, {
       method: "GET",
+      query: returnFieldsByFieldId
+        ? new URLSearchParams({ returnFieldsByFieldId: "true" })
+        : undefined,
       cache: "no-store",
-      ...requestOptions,
+      ...callOptions,
     })
   }
 

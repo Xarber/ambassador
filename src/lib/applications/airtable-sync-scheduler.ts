@@ -13,15 +13,6 @@ declare global {
   var __airtableSyncSchedulerStarted: boolean | undefined;
 }
 
-function parsePositiveInt(value: string | undefined, fallback: number) {
-  if (!value) return fallback;
-
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-
-  return parsed;
-}
-
 function isEnabled(value: string | undefined, fallback: boolean) {
   if (!value) return fallback;
 
@@ -45,26 +36,6 @@ function readStringEnv(name: string, legacyName?: string) {
   return "";
 }
 
-function readPositiveIntEnv(name: string, fallback: number, legacyName?: string) {
-  return parsePositiveInt(readStringEnv(name, legacyName) || undefined, fallback);
-}
-
-function formatError(error: unknown) {
-  if (error instanceof Error) return error.message;
-
-  return String(error);
-}
-
-function summarize(result: Awaited<ReturnType<typeof syncAirtableApplicationsToPostgres>>) {
-  return [
-    `processed=${result.processed}`,
-    `inserted=${result.inserted}`,
-    `updated=${result.updated}`,
-    `unmatched=${result.unmatchedApplications}`,
-    `matchedUsers=${result.matchedUsers}`,
-  ].join(" ");
-}
-
 async function runSync(timeoutMs: number) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -78,10 +49,20 @@ async function runSync(timeoutMs: number) {
       signal: controller.signal,
     });
     const elapsedMs = Date.now() - startedAt;
-    console.log(`[airtable-sync] ok (${elapsedMs}ms) ${summarize(result)}`);
+    console.log(
+      `[airtable-sync] ok (${elapsedMs}ms) ${[
+        `processed=${result.processed}`,
+        `inserted=${result.inserted}`,
+        `updated=${result.updated}`,
+        `unmatched=${result.unmatchedApplications}`,
+        `matchedUsers=${result.matchedUsers}`,
+      ].join(" ")}`,
+    );
   } catch (error) {
     const elapsedMs = Date.now() - startedAt;
-    console.error(`[airtable-sync] failed (${elapsedMs}ms) ${formatError(error)}`);
+    console.error(
+      `[airtable-sync] failed (${elapsedMs}ms) ${error instanceof Error ? error.message : String(error)}`,
+    );
   } finally {
     clearTimeout(timeoutId);
   }
@@ -104,16 +85,16 @@ export function startAirtableSyncScheduler() {
     return;
   }
 
-  const intervalMs = readPositiveIntEnv(
-    "AIRTABLE_SYNC_INTERVAL_MS",
-    DEFAULT_INTERVAL_MS,
-    LEGACY_ENV_KEYS.intervalMs,
-  );
-  const timeoutMs = readPositiveIntEnv(
-    "AIRTABLE_SYNC_TIMEOUT_MS",
-    DEFAULT_TIMEOUT_MS,
-    LEGACY_ENV_KEYS.timeoutMs,
-  );
+  const intervalMs = (() => {
+    const value = readStringEnv("AIRTABLE_SYNC_INTERVAL_MS", LEGACY_ENV_KEYS.intervalMs);
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_INTERVAL_MS;
+  })();
+  const timeoutMs = (() => {
+    const value = readStringEnv("AIRTABLE_SYNC_TIMEOUT_MS", LEGACY_ENV_KEYS.timeoutMs);
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
+  })();
 
   let inFlight = false;
 

@@ -346,14 +346,22 @@ export default async function AdminApplicationDetailPage({
         />
         <DetailFieldRow label={t("admin.application-detail.answers.github-url")} value={application.github_url} />
         <DetailFieldRow label={t("admin.application-detail.answers.portfolio-url")} value={application.portfolio_url} />
-        <TextAnswer
-          label={t("admin.application-detail.answers.first-thing-do")}
-          value={application.application_first_thing_do}
-        />
-        <TextAnswer
-          label={t("admin.application-detail.answers.best-place-poster")}
-          value={application.application_best_place_poster}
-        />
+        <div className="space-y-1">
+          <div className="text-sm text-secondary">
+            {t("admin.application-detail.answers.first-thing-do")}
+          </div>
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-body text-base leading-relaxed text-white">
+            {application.application_first_thing_do ?? "-"}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <div className="text-sm text-secondary">
+            {t("admin.application-detail.answers.best-place-poster")}
+          </div>
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-body text-base leading-relaxed text-white">
+            {application.application_best_place_poster ?? "-"}
+          </p>
+        </div>
       </DetailSection>
 
       <DetailSection
@@ -413,7 +421,27 @@ export default async function AdminApplicationDetailPage({
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.verification-status")} value={application.verification_status} />
         <DetailFieldRow
           label={t("admin.application-detail.applicant-fields.hca-addresses")}
-          value={addresses.length > 0 ? formatAddressList(addresses) : null}
+          value={
+            addresses.length > 0
+              ? addresses
+                  .map(
+                    (address, index) =>
+                      `(${index + 1})\n${[
+                        address.line_1 ?? null,
+                        address.line_2 ?? null,
+                        joinNonEmpty(
+                          address.city ?? null,
+                          address.state ?? null,
+                          address.postal_code ?? null,
+                          address.country ?? null,
+                        ),
+                      ]
+                        .filter((part): part is string => !!part)
+                        .join("\n")}`,
+                  )
+                  .join("\n\n")
+              : null
+          }
           multiline
         />
         <DetailFieldRow
@@ -531,36 +559,6 @@ export default async function AdminApplicationDetailPage({
           )}
         </div>
       </DetailSection>
-    </div>
-  );
-}
-
-function formatAddress(address: HackClubAddress) {
-  return [
-    address.line_1 ?? null,
-    address.line_2 ?? null,
-    joinNonEmpty(
-      address.city ?? null,
-      address.state ?? null,
-      address.postal_code ?? null,
-      address.country ?? null,
-    ),
-  ]
-    .filter((part): part is string => !!part)
-    .join("\n");
-}
-
-function formatAddressList(addresses: HackClubAddress[]) {
-  return addresses.map((address, index) => `(${index + 1})\n${formatAddress(address)}`).join("\n\n");
-}
-
-function TextAnswer({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="space-y-1">
-      <div className="text-sm text-secondary">{label}</div>
-      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-body text-base leading-relaxed text-white">
-        {value ?? "-"}
-      </p>
     </div>
   );
 }

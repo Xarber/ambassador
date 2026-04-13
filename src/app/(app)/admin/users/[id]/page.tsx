@@ -29,7 +29,31 @@ import {
   isUserManualDashboardState,
 } from "@/lib/user-dashboard-state";
 import { getActorSession } from "@/lib/session";
-import type { HackClubAddress } from "@/lib/settings";
+import { normalizeHackClubAddresses } from "@/lib/settings";
+
+type AdminUserRow = {
+  id: string;
+  hca_addresses: unknown;
+  hca_access_token: string | null;
+  permanently_rejected_at: string | null;
+  manual_dashboard_state: string | null;
+  slack_id: string | null;
+  slack_name: string | null;
+  display_name: string;
+};
+
+type ApplicationListRow = {
+  id: string;
+  status: string;
+  name: string;
+  date_of_birth?: string | null;
+  decision_note?: string | null;
+  created_at: string;
+  updated_at?: string;
+};
+
+type CountRow = { count: number };
+type LatestNoteEventRow = { note: string | null };
 
 export async function generateMetadata(): Promise<Metadata> {
   return getTranslatedPageMetadata("admin.user-detail.metadata.title");
@@ -61,7 +85,7 @@ export default async function AdminUserDetailPage({
   await ensureSchema();
   await ensureUserAddressSchema();
 
-  const [user] = await sql`
+  const user = (await sql<AdminUserRow[]>`
     SELECT id, hca_id, email, display_name, hca_first_name, hca_last_name, slack_id, slack_name,
            slack_avatar_url, verification_status, is_admin, last_ip, latitude, longitude, city,
            region, country_code, country_name, postal_code, timezone, org, hca_addresses,
@@ -71,7 +95,7 @@ export default async function AdminUserDetailPage({
     FROM users
     WHERE id = ${id}
     LIMIT 1
-  `;
+  `).at(0);
 
   if (!user) notFound();
 
@@ -91,7 +115,9 @@ export default async function AdminUserDetailPage({
         return [];
       })
     : [];
-  const addresses = (liveAddresses.length > 0 ? liveAddresses : storedAddresses) as HackClubAddress[];
+  const addresses = normalizeHackClubAddresses(
+    liveAddresses.length > 0 ? liveAddresses : storedAddresses,
+  );
 
   const [
     latestApplication,
@@ -103,24 +129,24 @@ export default async function AdminUserDetailPage({
     noteCountResult,
     noteHistory,
   ] = await Promise.all([
-    sql`
+    sql<ApplicationListRow[]>`
       SELECT id, status, name, date_of_birth, decision_note, created_at, updated_at
       FROM applications
       WHERE user_id = ${user.id}
       ORDER BY created_at DESC, id DESC
       LIMIT 1
-    `.then((rows) => rows[0] ?? null),
-    sql`
+    `.then((rows) => rows.at(0) ?? null),
+    sql<ApplicationListRow[]>`
       SELECT id, status, name, decision_note, created_at
       FROM applications
       WHERE user_id = ${user.id}
       ORDER BY created_at DESC, id DESC
     `,
-    sql`
+    sql<CountRow[]>`
       SELECT COUNT(*)::int AS count
       FROM ip_visits
       WHERE user_id = ${user.id}
-    `.then((rows) => rows[0]?.count ?? 0),
+    `.then((rows) => rows.at(0)?.count ?? 0),
     sql`
       SELECT id, ip, visit_type, city, region, country_code, org, created_at
       FROM ip_visits
@@ -136,18 +162,18 @@ export default async function AdminUserDetailPage({
       ORDER BY created_at DESC
       LIMIT 10
     `,
-    sql`
+    sql<LatestNoteEventRow[]>`
       SELECT note
       FROM user_note_events
       WHERE user_id = ${user.id}
       ORDER BY created_at DESC, id DESC
       LIMIT 1
-    `.then((rows) => rows[0] ?? null),
-    sql`
+    `.then((rows) => rows.at(0) ?? null),
+    sql<CountRow[]>`
       SELECT COUNT(*)::int AS count
       FROM user_note_events
       WHERE user_id = ${user.id}
-    `.then((rows) => rows[0]?.count ?? 0),
+    `.then((rows) => rows.at(0)?.count ?? 0),
     sql`
       SELECT une.id, une.note, une.created_at, une.created_by,
              actor.display_name AS actor_display_name, actor.email AS actor_email
@@ -169,7 +195,7 @@ export default async function AdminUserDetailPage({
   const totalNotePages = Math.max(1, Math.ceil(noteCountResult / 3));
   const currentNotePage = Math.min(notesPage, totalNotePages);
   const shouldShowPermanentRejectionLabel =
-    !!user.permanently_rejected_at &&
+    Boolean(user.permanently_rejected_at) &&
     !isRejectedPermanentlyApplicationStatus(latestApplication?.status);
   const canAccept = latestApplication
     ? canChangeApplicationReviewStatus(latestApplication.status, APPLICATION_STATUS_ACCEPTED)
@@ -184,7 +210,7 @@ export default async function AdminUserDetailPage({
       )
     : false;
   const manualDashboardState = isUserManualDashboardState(
-    user.manual_dashboard_state ?? null,
+    user.manual_dashboard_state,
   )
     ? user.manual_dashboard_state
     : null;
@@ -198,32 +224,9 @@ export default async function AdminUserDetailPage({
       : latestApplication?.status ?? null;
   const shouldShowHeaderLatestApplicationLabel =
     !manualDashboardState &&
-    !!latestApplication &&
+    latestApplication !== null &&
     !shouldShowPermanentRejectionLabel;
   const canImpersonateUser = Boolean(actorSession && actorSession.sub !== user.id);
-  const buildPageHref = ({
-    nextVisitsPage = currentVisitPage,
-    nextNotesPage = currentNotePage,
-    hash,
-  }: {
-    nextVisitsPage?: number;
-    nextNotesPage?: number;
-    hash?: string;
-  }) => {
-    const nextQuery = new URLSearchParams();
-
-    if (nextVisitsPage > 1) {
-      nextQuery.set("visitsPage", String(nextVisitsPage));
-    }
-
-    if (nextNotesPage > 1) {
-      nextQuery.set("notesPage", String(nextNotesPage));
-    }
-
-    const search = nextQuery.toString();
-
-    return `${search ? `?${search}` : ""}${hash ?? ""}`;
-  };
 
   return (
     <div className="space-y-10">
@@ -514,7 +517,20 @@ export default async function AdminUserDetailPage({
             label={t("common.page-fraction", { page: currentNotePage, totalPages: totalNotePages })}
             page={currentNotePage}
             totalPages={totalNotePages}
-            href={(page) => buildPageHref({ nextNotesPage: page, hash: "#internal-notes" })}
+            href={(page) => {
+              const search = new URLSearchParams();
+
+              if (currentVisitPage > 1) {
+                search.set("visitsPage", String(currentVisitPage));
+              }
+
+              if (page > 1) {
+                search.set("notesPage", String(page));
+              }
+
+              const query = search.toString();
+              return `${query ? `?${query}` : ""}#internal-notes`;
+            }}
           />
         </DetailSection>
       </div>
@@ -537,7 +553,27 @@ export default async function AdminUserDetailPage({
         <DetailFieldRow label={t("admin.user-detail.profile-fields.verification-status")} value={user.verification_status} />
         <DetailFieldRow
           label={t("admin.user-detail.profile-fields.hca-addresses")}
-          value={addresses.length > 0 ? formatAddressList(addresses) : null}
+          value={
+            addresses.length > 0
+              ? addresses
+                  .map(
+                    (address, index) =>
+                      `(${index + 1})\n${[
+                        address.line_1 ?? null,
+                        address.line_2 ?? null,
+                        joinNonEmpty(
+                          address.city ?? null,
+                          address.state ?? null,
+                          address.postal_code ?? null,
+                          address.country ?? null,
+                        ),
+                      ]
+                        .filter((part): part is string => !!part)
+                        .join("\n")}`,
+                  )
+                  .join("\n\n")
+              : null
+          }
           multiline
         />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.location")} value={joinNonEmpty(user.city, user.region, user.country_name, user.country_code)} />
@@ -594,7 +630,7 @@ export default async function AdminUserDetailPage({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-body text-sm text-white">{application.name ?? "-"}</td>
+                    <td className="px-4 py-4 font-body text-sm text-white">{application.name}</td>
                     <td className="px-4 py-4">
                       <Link
                         href={`/admin/applications/${application.id}`}
@@ -667,7 +703,20 @@ export default async function AdminUserDetailPage({
           label={t("common.page-fraction", { page: currentVisitPage, totalPages: totalVisitPages })}
           page={currentVisitPage}
           totalPages={totalVisitPages}
-          href={(page) => buildPageHref({ nextVisitsPage: page })}
+          href={(page) => {
+            const search = new URLSearchParams();
+
+            if (page > 1) {
+              search.set("visitsPage", String(page));
+            }
+
+            if (currentNotePage > 1) {
+              search.set("notesPage", String(currentNotePage));
+            }
+
+            const query = search.toString();
+            return query ? `?${query}` : "";
+          }}
         />
       </DetailSection>
 
@@ -693,23 +742,4 @@ export default async function AdminUserDetailPage({
       </DetailSection>
     </div>
   );
-}
-
-function formatAddress(address: HackClubAddress) {
-  return [
-    address.line_1 ?? null,
-    address.line_2 ?? null,
-    joinNonEmpty(
-      address.city ?? null,
-      address.state ?? null,
-      address.postal_code ?? null,
-      address.country ?? null,
-    ),
-  ]
-    .filter((part): part is string => !!part)
-    .join("\n");
-}
-
-function formatAddressList(addresses: HackClubAddress[]) {
-  return addresses.map((address, index) => `(${index + 1})\n${formatAddress(address)}`).join("\n\n");
 }

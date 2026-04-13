@@ -1,9 +1,11 @@
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import sql from "@/lib/database/client";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
-import { refreshHackClubAddresses } from "@/lib/hca-addresses";
+import { cacheHackClubAddresses } from "@/lib/hca-addresses";
 import { isSameOriginRequest } from "@/lib/http";
 import { getSession } from "@/lib/session";
+import { fetchHackClubAddresses } from "@/lib/auth";
+import { normalizeHackClubAddresses } from "@/lib/settings";
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) {
@@ -35,7 +37,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const addresses = await refreshHackClubAddresses(session.sub, hcaAccessToken);
+    const addresses = await cacheHackClubAddresses(
+      session.sub,
+      normalizeHackClubAddresses(await fetchHackClubAddresses(hcaAccessToken)),
+    );
 
     return Response.json({
       ok: true,

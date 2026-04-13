@@ -10,6 +10,7 @@
     "lint": "pnpm lint:js && pnpm lint:ts && pnpm lint:css && pnpm lint:html",
     "lint:js": "eslint . --cache --cache-location .eslintcache --ext .js,.jsx,.cjs,.mjs",
     "lint:ts": "eslint . --cache --cache-location .eslintcache --ext .ts,.tsx,.cts,.mts",
+    "lint:ts:type-aware": "eslint . --cache --cache-location .eslintcache-type-aware --ext .ts,.tsx,.cts,.mts -c eslint.type-aware.config.mjs",
     "lint:css": "stylelint \"src/**/*.css\" --cache --cache-location .stylelintcache",
     "lint:html": "files=$(find public src -type f \\( -name '*.html' -o -name '*.htm' \\) -print 2>/dev/null); if [ -n \"$files\" ]; then pnpm exec html-validate $files; else echo 'No HTML files found. Skipping HTML lint.'; fi",
     "type-check": "rm -rf .next/types .next/dev/types && pnpm exec next typegen && pnpm exec tsc --noEmit",
