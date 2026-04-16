@@ -59,7 +59,7 @@ dashboard:
   no-application:
     eyebrow: Get Started
     title: Apply to be an Ambassador
-    body: "Ready to represent Hack Club? Fill out a quick application and we'll review it."
+    body: "Ready to become a Hack Club Stardance Ambassador? Fill out a quick application and we'll review it."
     cta: Apply Now
   pending:
     eyebrow: Under review
