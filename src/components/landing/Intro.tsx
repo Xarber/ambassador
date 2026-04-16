@@ -21,6 +21,7 @@ export default function Intro() {
           <p key={key}>
             {t.rich(`intro.${key}`, {
               strong: (chunks) => <strong>{chunks}</strong>,
+              faq_link: (chunks) => <u><a href="#faq">{chunks}</a></u>,
               partyparrot: () => (
                 <Image
                   src={partyparrot}
@@ -42,7 +43,6 @@ export default function Intro() {
         <span className="font-jersey text-3xl uppercase">{t("apply")}</span>
       </Link>
       <p className="mt-4 text-neutral-600 text-sm">{t("apply-sub")}</p>
-      <p className="mt-2 text-neutral-600 text-sm">{t("intro.footnote")}</p>
       <p className="text-neutral-500 mt-4 md:text-lg xl:text-xl font-jersey">
         &lt;&lt;EOF
       </p>

@@ -691,12 +691,10 @@ landing:
 
   intro:
     start: --- START OF MESSAGE ---
-    0: At Hack Club, we help teens to discover the joy of code, together. We run events for teen hackers to make cool things, and earn prizes - from iPads, MacBooks and Raspberry Pis, to flights to in-person hackathons around the world. Along the way, they'll find a space online made for them, and maybe make a few friends too.
-    1: This summer, we're partnering with NASA, AMD, and GitHub to run <strong>the world's biggest engineering challenge</strong>, and we want your help.
-    2: We're looking for young people like you to build and lead the Hack Club community in your city. We want you to run hangouts and meetups, put up posters around your area, and encourage even more teens to sign up and take part in our events. You could drive, cycle, take the bus or train, or however else you want to get around your city.
-    4: In return, we'll give you a Hack Club branded t-shirt, and a <strong>$100 honorarium</strong>*. Plus $1 for every poster you put up, and $0.50 for every signup you get. <strong>Real money.</strong> To your bank account. <partyparrot></partyparrot>
-    5: Ready?
-    footnote: "*If you run 2+ meetups per month in June, July and August, we'll pay you $100 at the end of August."
+    0: This summer, Hack Club is partnering with NASA, AMD, and GitHub to run the world’s biggest engineering challenge, and we need your help to figure out how to drive signups and help hundreds of thousands of students discover Hack Club for the first time.
+    1: Your mission, should you choose to accept it, would be to get teenagers from your city to sign up for the Stardance Challenge. Together, we will figure out how to get 100,000 users through the summer!
+    2: By the end of this summer, you will be an expert at driving users for whatever you do in the future. You also get Hack Club t-shirts and merch. Plus, you a $100 honorarium and get paid for every poster you put up and every signup you get. Find more info <faq_link>here</faq_link>.
+    3: Ready?
     end: <<EOF
 
   past-events:

@@ -78,7 +78,7 @@ const questions = [
 
 export default function Questions() {
   return (
-    <div className="p-12 relative max-w-7xl mx-auto">
+    <div className="p-12 relative max-w-7xl mx-auto" id="faq">
       <h2 className="text-4xl md:text-5xl font-jersey">
         Questions you might have
       </h2>
