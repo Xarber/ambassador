@@ -226,7 +226,7 @@ export default async function ReviewModePage({
                   {i > 0 && ", "}
                   <Link
                     href={`/admin/applications/${a.id}`}
-                    className="text-[var(--acceptance)] no-underline underline-offset-2 hover:underline hover:opacity-80 focus-visible:underline"
+                    className="ui-hover-underline text-[var(--acceptance)] hover:opacity-80"
                   >
                     {getRelatedApplicationLabel(a)}
                   </Link>{" "}
@@ -247,7 +247,7 @@ export default async function ReviewModePage({
                   {i > 0 && ", "}
                   <Link
                     href={`/admin/applications/${a.id}`}
-                    className="text-[var(--primary)] no-underline underline-offset-2 hover:underline hover:opacity-80 focus-visible:underline"
+                    className="ui-hover-underline text-[var(--primary)] hover:opacity-80"
                   >
                     {getRelatedApplicationLabel(a)}
                   </Link>{" "}

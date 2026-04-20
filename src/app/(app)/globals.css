@@ -198,6 +198,22 @@ a {
   .ui-open-link:focus-visible {
     color: var(--acceptance) !important;
   }
+
+  .ui-hover-underline {
+    cursor: pointer;
+    text-decoration-line: none !important;
+    text-decoration-color: currentColor;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.14em;
+    transition:
+      opacity 150ms ease,
+      text-decoration-color 150ms ease;
+  }
+
+  .ui-hover-underline:hover,
+  .ui-hover-underline:focus-visible {
+    text-decoration-line: underline !important;
+  }
 }
 
 @layer utilities {
