@@ -268,6 +268,25 @@ function resolveState({
   officeGrant: OfficeGrantRecord | null;
   canUseShirts: boolean;
 }): ResolvedState {
+  const devFailedOfficeGrant: OfficeGrantRecord = {
+    id: "dev-failed-office-grant",
+    userId: "dev-user",
+    grantId: null,
+    organizationId: null,
+    provisioningState: "pending",
+    provisioningSource: "dev",
+    purpose: "Dev office grant",
+    amountCents: 0,
+    balanceCents: null,
+    balanceSyncedAt: null,
+    linkedAt: null,
+    linkedByUserId: null,
+    lastAttemptedAt: fakeDate,
+    nextRetryAt: null,
+    lastError: "Dev state: grant provisioning failed.",
+    createdAt: fakeDate,
+    updatedAt: fakeDate,
+  };
   const states = {
     ineligible: {
       node: (
@@ -310,7 +329,14 @@ function resolveState({
           tone="accent"
           glyph="private"
           title={t("dashboard.pending-automatic-checks.title")}
-          body={t("dashboard.pending-automatic-checks.body")}
+          body={
+            <>
+              {t("dashboard.pending-automatic-checks.body")}
+              <strong className="mt-4 block font-bold">
+                {t("dashboard.pending-automatic-checks.support")}
+              </strong>
+            </>
+          }
           action={{
             href: "https://auth.hackclub.com",
             label: t("dashboard.pending-automatic-checks.cta"),
@@ -323,26 +349,42 @@ function resolveState({
     },
     approved: {
       node: (
-        <div className="space-y-8">
-          <StatusCard
-            tone="acceptance"
-            glyph="checkbox-checked"
-            title={t("dashboard.approved.title")}
-            body={t("dashboard.approved.body")}
-          />
-          {shirt.requiresOnboarding ? (
-            <OnboardingPromptBanner onboardingFormUrl={shirt.onboardingFormUrl} t={t} />
-          ) : (
-            <>
-              <OfficeGrantSection officeGrant={officeGrant} />
-              {canUseShirts ? <ShirtOrderSection {...shirt} /> : null}
-            </>
-          )}
-        </div>
+        <ApprovedDashboardContent
+          canUseShirts={canUseShirts}
+          officeGrant={officeGrant}
+          shirt={shirt}
+          t={t}
+        />
       ),
       activeStep: "decision",
       decision: "approved",
       devState: "approved",
+    },
+    "accepted-not-onboarded": {
+      node: (
+        <ApprovedDashboardContent
+          canUseShirts={canUseShirts}
+          officeGrant={officeGrant}
+          shirt={{ ...shirt, requiresOnboarding: true }}
+          t={t}
+        />
+      ),
+      activeStep: "decision",
+      decision: "approved",
+      devState: "accepted-not-onboarded",
+    },
+    "accepted-grant-failed": {
+      node: (
+        <ApprovedDashboardContent
+          canUseShirts={canUseShirts}
+          officeGrant={devFailedOfficeGrant}
+          shirt={{ ...shirt, requiresOnboarding: false }}
+          t={t}
+        />
+      ),
+      activeStep: "decision",
+      decision: "approved",
+      devState: "accepted-grant-failed",
     },
     rejected: {
       node: (
@@ -383,6 +425,8 @@ function resolveState({
     case "ineligible":
     case "pending-checks":
     case "approved":
+    case "accepted-not-onboarded":
+    case "accepted-grant-failed":
     case "rejected":
     case "banned":
     case "apply":
@@ -431,6 +475,37 @@ function resolveState({
   return { node: null, activeStep: null, decision: null, devState: "apply" };
 }
 
+function ApprovedDashboardContent({
+  canUseShirts,
+  officeGrant,
+  shirt,
+  t,
+}: {
+  canUseShirts: boolean;
+  officeGrant: OfficeGrantRecord | null;
+  shirt: ShirtOrderSectionProps;
+  t: DashboardTranslations;
+}) {
+  return (
+    <div className="space-y-8">
+      <StatusCard
+        tone="acceptance"
+        glyph="checkbox-checked"
+        title={t("dashboard.approved.title")}
+        body={t("dashboard.approved.body")}
+      />
+      {shirt.requiresOnboarding ? (
+        <OnboardingPromptBanner onboardingFormUrl={shirt.onboardingFormUrl} t={t} />
+      ) : (
+        <>
+          <OfficeGrantSection officeGrant={officeGrant} t={t} />
+          {canUseShirts ? <ShirtOrderSection {...shirt} /> : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 function OnboardingPromptBanner({
   onboardingFormUrl,
   t,
@@ -461,27 +536,29 @@ function OnboardingPromptBanner({
 
 function OfficeGrantSection({
   officeGrant,
+  t,
 }: {
   officeGrant: OfficeGrantRecord | null;
+  t: DashboardTranslations;
 }) {
   const message = getOfficeGrantDashboardMessage({ grant: officeGrant });
 
   return (
     <section>
       <div className="min-w-0">
-        <h2 className="font-sub text-2xl text-white md:text-3xl">Office grant</h2>
+        <h2 className="font-sub text-2xl text-white md:text-3xl">{t("office-grant.title")}</h2>
 
         <p className="mt-2 text-base leading-relaxed text-muted-foreground md:text-lg">
-          {message.state === "linked" && message.href !== null ? (
+          {message.messageKey === "linked" && message.href !== null ? (
             <>
-              Find your office grant{" "}
+              {t("office-grant.messages.linked-prefix")}{" "}
               <a href={message.href} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">
-                here
+                {t("office-grant.messages.linked-link-label")}
               </a>
-              ! Please be careful with spending your funds and feel free to ask if a purchase is an acceptable office expense.
+              {t("office-grant.messages.linked-suffix")}
             </>
           ) : (
-            message.body
+            t(`office-grant.messages.${message.messageKey}`)
           )}
         </p>
       </div>
@@ -575,7 +652,7 @@ type StatusCardProps = {
   tone: Tone;
   glyph: IconGlyph;
   title: string;
-  body: string;
+  body: ReactNode;
   action?: {
     href: string;
     label: string;

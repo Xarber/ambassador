@@ -9,7 +9,6 @@ export async function proxy(request: NextRequest) {
 
   const isProtected = [
     "/dashboard",
-    "/form",
     "/admin",
     "/api/applications",
     "/api/shirt",
@@ -38,7 +37,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/form/:path*",
     "/admin/:path*",
     "/api/applications/:path*",
     "/api/shirt/:path*",

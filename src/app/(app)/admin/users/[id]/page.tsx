@@ -84,18 +84,18 @@ type ApplicationListRow = {
 type CountRow = { count: number };
 type LatestNoteEventRow = { note: string | null };
 
-const HCB_GRANT_STATUS_MESSAGES = new Map<string, string>([
-  ["linked", "HCB office grant linked."],
-  ["queued", "HCB office grant queued for provisioning."],
-  ["already_linked", "This user already has an HCB office grant linked."],
-  ["already_pending", "This user's HCB office grant is already pending provisioning."],
-  ["not_onboarded", "This user is not onboarded yet, so no HCB office grant was queued."],
-  ["provision_failed", "The HCB office grant request failed."],
-  ["unlinked", "HCB office grant unlinked."],
-  ["invalid", "Enter a grant ID before linking."],
-  ["not_found", "User not found."],
-  ["link_failed", "Could not link that HCB grant."],
-  ["unlink_failed", "Could not unlink that HCB grant."],
+const HCB_GRANT_STATUS_KEYS = new Set([
+  "linked",
+  "queued",
+  "already_linked",
+  "already_pending",
+  "not_onboarded",
+  "provision_failed",
+  "unlinked",
+  "invalid",
+  "not_found",
+  "link_failed",
+  "unlink_failed",
 ]);
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -244,6 +244,9 @@ export default async function AdminUserDetailPage({
   });
   const officeGrantDashboardMessage = getOfficeGrantDashboardMessage({ grant: officeGrant });
   const officeGrantUrl = officeGrantDashboardMessage.href;
+  const officeGrantDashboardBody = officeGrantDashboardMessage.messageKey === "linked"
+    ? `${t("office-grant.messages.linked-prefix")} ${t("office-grant.messages.linked-link-label")}${t("office-grant.messages.linked-suffix")}`
+    : t(`office-grant.messages.${officeGrantDashboardMessage.messageKey}`);
   const officeGrantBalance =
     officeGrant?.balanceCents !== null &&
     officeGrant?.balanceCents !== undefined &&
@@ -252,7 +255,9 @@ export default async function AdminUserDetailPage({
       : null;
   const hcbGrantStatus = query.hcbGrant?.trim() ?? "";
   const hcbGrantFlashMessage =
-    hcbGrantStatus === "" ? null : HCB_GRANT_STATUS_MESSAGES.get(hcbGrantStatus) ?? null;
+    hcbGrantStatus !== "" && HCB_GRANT_STATUS_KEYS.has(hcbGrantStatus)
+      ? t(`office-grant.admin-status.${hcbGrantStatus}`)
+      : null;
   const superuserStatus = query.superuser?.trim() ?? "";
   const superuserFlashMessage = superuserStatus === ""
     ? null
@@ -597,7 +602,7 @@ export default async function AdminUserDetailPage({
           />
           <DetailFieldRow
             label="User-facing status"
-            value={officeGrantDashboardMessage.body}
+            value={officeGrantDashboardBody}
           />
           <DetailFieldRow
             label="Last error"

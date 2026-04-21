@@ -1,6 +1,7 @@
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { optionalEnv } from "@/lib/env";
 import { getRequestIp } from "@/lib/http";
+import { checkRateLimit, getIpRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { findReferralLinkByCode, recordReferralLinkClick } from "@/lib/referrals";
 
 export const runtime = "nodejs";
@@ -10,6 +11,16 @@ export async function GET(
   context: { params: Promise<{ code: string }> },
 ) {
   const { code } = await context.params;
+
+  const rateLimit = await checkRateLimit({
+    scope: "referral-redirect",
+    key: getIpRateLimitKey(request),
+    limit: 200,
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
 
   await ensureSchema();
 

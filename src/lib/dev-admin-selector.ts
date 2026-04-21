@@ -4,6 +4,8 @@ export type DevState =
   | "pending-checks"
   | "pending"
   | "approved"
+  | "accepted-not-onboarded"
+  | "accepted-grant-failed"
   | "rejected"
   | "banned";
 export type ErrorCode = "401" | "403" | "404" | "500";
@@ -15,7 +17,7 @@ export function canShowDevAdminSelector(isAdmin: boolean) {
 }
 
 export function isDevState(value: string): value is DevState {
-  return value === "apply" || value === "ineligible" || value === "pending-checks" || value === "pending" || value === "approved" || value === "rejected" || value === "banned";
+  return value === "apply" || value === "ineligible" || value === "pending-checks" || value === "pending" || value === "approved" || value === "accepted-not-onboarded" || value === "accepted-grant-failed" || value === "rejected" || value === "banned";
 }
 
 export function isErrorCode(value: string): value is ErrorCode {

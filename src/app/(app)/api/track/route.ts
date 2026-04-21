@@ -7,11 +7,22 @@ import {
   trackAuthenticatedVisit,
 } from "@/lib/geo";
 import { getRequestIp, isSameOriginRequest } from "@/lib/http";
+import { checkRateLimit, getIpRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { verifyToken } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
     return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit({
+    scope: "track",
+    key: getIpRateLimitKey(request),
+    limit: 200,
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   await ensureSchema();

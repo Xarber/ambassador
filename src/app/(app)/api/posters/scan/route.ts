@@ -7,6 +7,7 @@ import {
   validateImageUpload,
 } from "@/lib/posters/http";
 import { scanAnyUserPoster } from "@/lib/posters/service";
+import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,16 @@ export async function POST(request: Request) {
     }
 
     const session = await requirePosterSession();
+    const rateLimit = await checkRateLimit({
+      scope: "poster-checker",
+      key: getRateLimitKey(session.sub),
+      limit: 10_000,
+    });
+
+    if (!rateLimit.ok) {
+      return rateLimitResponse(rateLimit);
+    }
+
     const formData = await request.formData();
     const file = formData.get("proof");
 

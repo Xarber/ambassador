@@ -13,8 +13,19 @@ import {
   OAUTH_STATE_COOKIE_NAME,
 } from "@/lib/auth";
 import { getSafeRedirectPath } from "@/lib/http";
+import { checkRateLimit, getIpRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
+  const rateLimit = await checkRateLimit({
+    scope: "auth-login",
+    key: getIpRateLimitKey(request),
+    limit: 200,
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
+  }
+
   const url = new URL(request.url);
   const submittedEmail = url.searchParams.get("email");
   const normalizedSubmittedEmail =

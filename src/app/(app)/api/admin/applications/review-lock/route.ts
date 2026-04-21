@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   // Clear expired locks
   await sql`
     DELETE FROM review_locks
-    WHERE locked_at < NOW() - INTERVAL '${sql.unsafe(String(LOCK_TTL_SECONDS))} seconds'
+    WHERE locked_at < NOW() - make_interval(secs => ${LOCK_TTL_SECONDS}::double precision)
   `;
 
   // Check if someone else holds the lock
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     FROM review_locks
     WHERE application_id = ${applicationId}
       AND locked_by != ${session.sub}
-      AND locked_at >= NOW() - INTERVAL '${sql.unsafe(String(LOCK_TTL_SECONDS))} seconds'
+      AND locked_at >= NOW() - make_interval(secs => ${LOCK_TTL_SECONDS}::double precision)
     LIMIT 1
   `).at(0);
 

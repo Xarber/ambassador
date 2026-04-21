@@ -19,7 +19,7 @@ export default async function ReviewModeEntryPage() {
   // Clear expired locks
   await sql`
     DELETE FROM review_locks
-    WHERE locked_at < NOW() - INTERVAL '${sql.unsafe(String(LOCK_TTL_SECONDS))} seconds'
+    WHERE locked_at < NOW() - make_interval(secs => ${LOCK_TTL_SECONDS}::double precision)
   `;
 
   const nextApplication = (await sql<{ id: string }[]>`
@@ -35,7 +35,7 @@ export default async function ReviewModeEntryPage() {
     ) latest ON true
     LEFT JOIN review_locks rl ON rl.application_id = a.id
       AND rl.locked_by != ${session.sub}
-      AND rl.locked_at >= NOW() - INTERVAL '${sql.unsafe(String(LOCK_TTL_SECONDS))} seconds'
+      AND rl.locked_at >= NOW() - make_interval(secs => ${LOCK_TTL_SECONDS}::double precision)
     WHERE a.status = ${APPLICATION_STATUS_PENDING_REVIEW}
       AND COALESCE(latest.id, a.id) = a.id
       AND rl.application_id IS NULL

@@ -28,7 +28,8 @@ export function readHcaAccessToken(value: string | null | undefined) {
   if (token === undefined || token === "") return null;
 
   if (!isEncryptedHcaAccessToken(token)) {
-    return token;
+    console.error("Stored HCA access token is not encrypted");
+    return null;
   }
 
   const plaintext = decryptToken(token, AUTH_TOKEN_ENCRYPTION_CONTEXT);

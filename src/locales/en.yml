@@ -39,6 +39,8 @@ dev-admin-selector:
     pending-checks: Pending (ID check)
     pending: Pending (review)
     approved: Approved
+    accepted-not-onboarded: Approved but not onboarded
+    accepted-grant-failed: Approved but grant failed
     rejected: Rejected
     banned: Application closed
 
@@ -69,7 +71,8 @@ dashboard:
   pending-automatic-checks:
     eyebrow: One more step
     title: Please verify your ID
-    body: Please ID verify at auth.hackclub.com so we can keep moving your application forward.
+    body: Please verify your ID at auth.hackclub.com so we can keep moving your application forward.
+    support: "In case it does not update within a few hours, send a message in #hq-ambassadors-support or email ambassadors@hackclub.com so we can help you."
     cta: Verify at auth.hackclub.com
   approved:
     eyebrow: Accepted
@@ -89,6 +92,27 @@ dashboard:
     eyebrow: Permanently Rejected
     title: Application Closed
     body: Your latest application has been permanently rejected. Contact the team directly if you believe this needs review.
+
+office-grant:
+  title: Office grant
+  messages:
+    none: "There is no office grant linked to your Ambassador account yet. Please send a message in #hq-ambassadors-support or email ambassadors@hackclub.com so we can help."
+    failed: "We are unable to provision your office funds grant right now. Please send a message in #hq-ambassadors-support or email ambassadors@hackclub.com so we can help."
+    linked-prefix: Find your office grant
+    linked-link-label: here
+    linked-suffix: "! Please be careful with spending your funds and feel free to ask if a purchase is an acceptable office expense."
+  admin-status:
+    linked: HCB office grant linked.
+    queued: HCB office grant queued for provisioning.
+    already_linked: This user already has an HCB office grant linked.
+    already_pending: "This user's HCB office grant is already pending provisioning."
+    not_onboarded: This user is not onboarded yet, so no HCB office grant was queued.
+    provision_failed: The HCB office grant request failed.
+    unlinked: HCB office grant unlinked.
+    invalid: Enter a grant ID before linking.
+    not_found: User not found.
+    link_failed: Could not link that HCB grant.
+    unlink_failed: Could not unlink that HCB grant.
 
 posters:
   metadata:

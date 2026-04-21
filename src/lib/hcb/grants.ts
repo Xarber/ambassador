@@ -766,7 +766,7 @@ export function getOfficeGrantDashboardMessage(input: {
     return {
       state: grant?.provisioningState ?? "none",
       href: null,
-      body: "There is no office grant linked to your Ambassador account yet. Please send a message in #hq-ambassadors-support or email ambassadors@hackclub.com so we can help.",
+      messageKey: "none",
     } as const;
   }
 
@@ -774,13 +774,13 @@ export function getOfficeGrantDashboardMessage(input: {
     return {
       state: grant.provisioningState,
       href: null,
-      body: "We are unable to provision your office funds grant right now. Please send a message in #hq-ambassadors-support or email ambassadors@hackclub.com so we can help.",
+      messageKey: "failed",
     } as const;
   }
 
   return {
     state: grant.provisioningState,
     href: buildOfficeGrantUrl(grant.grantId),
-    body: "Find your office grant here! Please be careful with spending your funds and feel free to ask if a purchase is an acceptable office expense.",
+    messageKey: "linked",
   } as const;
 }

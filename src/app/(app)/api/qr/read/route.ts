@@ -6,6 +6,7 @@ import {
   validateImageUpload,
 } from "@/lib/posters/http";
 import { readQrCodesFromImageBuffer } from "@/lib/posters/qr";
+import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,17 @@ export async function POST(request: Request) {
       return Response.json({ error: "forbidden" }, { status: 403 });
     }
 
-    await requirePosterSession();
+    const session = await requirePosterSession();
+    const rateLimit = await checkRateLimit({
+      scope: "poster-checker",
+      key: getRateLimitKey(session.sub),
+      limit: 10_000,
+    });
+
+    if (!rateLimit.ok) {
+      return rateLimitResponse(rateLimit);
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 

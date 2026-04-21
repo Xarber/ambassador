@@ -35,6 +35,8 @@ export function DevAdminSelector({
     { value: "pending-checks", label: t("states.pending-checks") },
     { value: "pending", label: t("states.pending") },
     { value: "approved", label: t("states.approved") },
+    { value: "accepted-not-onboarded", label: t("states.accepted-not-onboarded") },
+    { value: "accepted-grant-failed", label: t("states.accepted-grant-failed") },
     { value: "rejected", label: t("states.rejected") },
     { value: "banned", label: t("states.banned") },
   ];

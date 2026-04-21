@@ -5,8 +5,20 @@ import { isUserAdmin } from "@/lib/applications/review";
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getSafeRedirectUrl, isSameOriginRequest } from "@/lib/http";
+import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { getActorSession } from "@/lib/session";
 import { isSuperuserConfigured, verifySuperuserPassword } from "@/lib/superuser";
+
+type AdminMutationResult =
+  | {
+      ok: true;
+      previousIsAdmin: boolean | null;
+    }
+  | {
+      ok: false;
+      error: "forbidden" | "not_found";
+      status: 403 | 404;
+    };
 
 function redirectWithSuperuserStatus(
   request: Request,
@@ -35,6 +47,16 @@ export async function POST(
   await ensureSchema();
   if (!(await isUserAdmin(session.sub))) {
     return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit({
+    scope: "superuser-password",
+    key: getRateLimitKey(session.sub),
+    limit: 200,
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   const { id } = await params;
@@ -69,20 +91,46 @@ export async function POST(
     return redirectWithSuperuserStatus(request, formData, id, "invalid");
   }
 
-  await sql`
-    UPDATE users
-    SET is_admin = TRUE,
-        updated_at = NOW()
-    WHERE id = ${id}
-  `;
+  const result = await sql.begin(async (transaction): Promise<AdminMutationResult> => {
+    const lockedUsers = await transaction<{ id: string; is_admin: boolean | null }[]>`
+      SELECT id, is_admin
+      FROM users
+      WHERE id = ${session.sub} OR id = ${id}
+      ORDER BY id
+      FOR UPDATE
+    `;
+    const actor = lockedUsers.find((user) => user.id === session.sub) ?? null;
+    const target = lockedUsers.find((user) => user.id === id) ?? null;
 
-  if (existingUser.is_admin !== true) {
+    if (actor?.is_admin !== true) {
+      return { ok: false, error: "forbidden", status: 403 };
+    }
+
+    if (target === null) {
+      return { ok: false, error: "not_found", status: 404 };
+    }
+
+    await transaction`
+      UPDATE users
+      SET is_admin = TRUE,
+          updated_at = NOW()
+      WHERE id = ${id}
+    `;
+
+    return { ok: true, previousIsAdmin: target.is_admin };
+  });
+
+  if (!result.ok) {
+    return Response.json({ error: result.error }, { status: result.status });
+  }
+
+  if (result.previousIsAdmin !== true) {
     await logAdminActionEvent({
       actorUserId: session.sub,
       targetUserId: id,
       action: "user_promoted_to_admin",
       metadata: {
-        previousIsAdmin: Boolean(existingUser.is_admin),
+        previousIsAdmin: Boolean(result.previousIsAdmin),
         nextIsAdmin: true,
       },
     });

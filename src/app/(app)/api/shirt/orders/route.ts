@@ -4,6 +4,7 @@ import { ensureSchema } from "@/lib/database/ensure-schema";
 import { loadUserHackClubAddresses } from "@/lib/hca-addresses";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { isSameOriginRequest } from "@/lib/http";
+import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 import { getSession } from "@/lib/session";
 import { canAccessShirts } from "@/lib/shirt/access";
 import {
@@ -40,6 +41,16 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const rateLimit = await checkRateLimit({
+    scope: "shirt-orders",
+    key: getRateLimitKey(session.sub),
+    limit: 200,
+  });
+
+  if (!rateLimit.ok) {
+    return rateLimitResponse(rateLimit);
   }
 
   await ensureSchema();

@@ -86,7 +86,7 @@ function InlineAuthLink() {
       href="https://auth.hackclub.com/addresses"
       target="_blank"
       rel="noreferrer"
-      className="!text-primary !underline hover:!opacity-80"
+      className="!text-acceptance !underline hover:!opacity-80"
     >
       Hack Club Auth
     </a>
@@ -106,19 +106,21 @@ function NoAddressMessage({
   const [beforeLink, afterLink = ""] = body.split(linkLabel);
 
   return (
-    <p className="font-body text-base text-white">
-      <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>
-          {beforeLink}
-          <InlineAuthLink />
-          {afterLink}
+    <div className="border border-[var(--primary)]/40 bg-[var(--primary)]/10 p-4">
+      <p className="font-body text-sm leading-relaxed text-white">
+        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            {beforeLink}
+            <InlineAuthLink />
+            {afterLink}
+          </span>
+          <RefreshAddressButton
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+          />
         </span>
-        <RefreshAddressButton
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-        />
-      </span>
-    </p>
+      </p>
+    </div>
   );
 }
 
