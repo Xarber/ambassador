@@ -27,6 +27,7 @@ import {
 import { loadUserHackClubAddresses } from "@/lib/hca-addresses";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { canAccessPosters } from "@/lib/posters/access";
+import { getSafeguards } from "@/lib/safeguards";
 import { getSession } from "@/lib/session";
 import { canAccessShirts } from "@/lib/shirt/access";
 import {
@@ -101,10 +102,11 @@ export default async function DashboardPage({
   const session = await getSession();
   if (!session) redirect("/");
   await ensureSchema();
-  const [t, locale, { devState }] = await Promise.all([
+  const [t, locale, { devState }, safeguards] = await Promise.all([
     getTranslations(),
     getLocale(),
     searchParams,
+    getSafeguards(),
   ]);
 
   const [application, user, existingOrderRow] = await Promise.all([
@@ -131,18 +133,19 @@ export default async function DashboardPage({
     redirect("/");
   }
 
-  const canUseShirts = canAccessShirts({
+  const canAccessShirtOrdering = canAccessShirts({
     latestApplicationStatus: application?.status ?? null,
     manualDashboardState: user.manual_dashboard_state,
   });
-  const shirtOnboardingStatus = canUseShirts
+  const canUseShirts = canAccessShirtOrdering && safeguards.shirtOrderingEnabled;
+  const shirtOnboardingStatus = canAccessShirtOrdering
     ? await getAmbassadorOnboardingStatus({
         applicationAirtableRecordId: application?.airtable_record_id ?? null,
         applicationAirtablePayload: application?.airtable_payload ?? null,
       })
     : { hasAmbassadorRecord: false, status: "Unsubmitted" as const, isOnboardingComplete: false };
   const shirtRequiresOnboarding =
-    canUseShirts &&
+    canAccessShirtOrdering &&
     (!shirtOnboardingStatus.hasAmbassadorRecord ||
       !shirtOnboardingStatus.isOnboardingComplete);
   const shouldLoadShirtAddresses = canUseShirts && !shirtRequiresOnboarding;
@@ -195,6 +198,7 @@ export default async function DashboardPage({
     shirt,
     officeGrant,
     canUseShirts,
+    onboardingEnabled: safeguards.onboardingEnabled,
   };
   const baseResolved = resolveState({ ...stateInput, activeDevState: null });
   const selectedDevState = devState !== undefined && isDevState(devState) ? devState : null;
@@ -248,6 +252,7 @@ function resolveState({
   t,
   shirt,
   canUseShirts,
+  onboardingEnabled,
   officeGrant,
 }: {
   activeDevState: DevState | null;
@@ -267,6 +272,7 @@ function resolveState({
   shirt: ShirtOrderSectionProps;
   officeGrant: OfficeGrantRecord | null;
   canUseShirts: boolean;
+  onboardingEnabled: boolean;
 }): ResolvedState {
   const devFailedOfficeGrant: OfficeGrantRecord = {
     id: "dev-failed-office-grant",
@@ -352,6 +358,7 @@ function resolveState({
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
           officeGrant={officeGrant}
+          onboardingEnabled={onboardingEnabled}
           shirt={shirt}
           t={t}
         />
@@ -365,6 +372,7 @@ function resolveState({
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
           officeGrant={officeGrant}
+          onboardingEnabled={onboardingEnabled}
           shirt={{ ...shirt, requiresOnboarding: true }}
           t={t}
         />
@@ -378,6 +386,7 @@ function resolveState({
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
           officeGrant={devFailedOfficeGrant}
+          onboardingEnabled={onboardingEnabled}
           shirt={{ ...shirt, requiresOnboarding: false }}
           t={t}
         />
@@ -478,11 +487,13 @@ function resolveState({
 function ApprovedDashboardContent({
   canUseShirts,
   officeGrant,
+  onboardingEnabled,
   shirt,
   t,
 }: {
   canUseShirts: boolean;
   officeGrant: OfficeGrantRecord | null;
+  onboardingEnabled: boolean;
   shirt: ShirtOrderSectionProps;
   t: DashboardTranslations;
 }) {
@@ -495,7 +506,11 @@ function ApprovedDashboardContent({
         body={t("dashboard.approved.body")}
       />
       {shirt.requiresOnboarding ? (
-        <OnboardingPromptBanner onboardingFormUrl={shirt.onboardingFormUrl} t={t} />
+        <OnboardingPromptBanner
+          enabled={onboardingEnabled}
+          onboardingFormUrl={shirt.onboardingFormUrl}
+          t={t}
+        />
       ) : (
         <>
           <OfficeGrantSection officeGrant={officeGrant} t={t} />
@@ -507,12 +522,27 @@ function ApprovedDashboardContent({
 }
 
 function OnboardingPromptBanner({
+  enabled,
   onboardingFormUrl,
   t,
 }: {
+  enabled: boolean;
   onboardingFormUrl: string;
   t: DashboardTranslations;
 }) {
+  if (!enabled) {
+    return (
+      <section className="border border-[var(--primary)]/40 bg-[var(--primary)]/10 p-4">
+        <p className="font-body text-sm leading-relaxed text-white">
+          <span className="font-bold text-[var(--primary)]">
+            {t("dashboard.onboarding.disabled-title")}
+          </span>{" "}
+          {t("dashboard.onboarding.disabled-body")}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="border border-[var(--primary)]/40 bg-[var(--primary)]/10 p-4">
       <p className="font-body text-sm leading-relaxed text-white">

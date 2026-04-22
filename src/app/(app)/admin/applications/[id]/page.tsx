@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 
 import { DeleteApplicationButton } from "@/components/admin/delete-application-button";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
-import { DetailFieldRow, DetailPager, DetailSection } from "@/components/admin/detail";
+import { DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
+import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { formatDate, formatDateTime, joinNonEmpty } from "@/lib/format";
+import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { ensureUserAddressSchema } from "@/lib/database/user-address-schema";
 import { normalizeHackClubAddresses } from "@/lib/settings";
@@ -191,6 +193,8 @@ export default async function AdminApplicationDetailPage({
       })
     : [];
   const addresses = normalizeHackClubAddresses(liveAddresses.length > 0 ? liveAddresses : storedAddresses);
+  const hackatimeSlackId = application.user_slack_id ?? application.applicant_slack_id;
+  const hackatimeTrust = await getCachedHackatimeTrustLevel(hackatimeSlackId);
 
   const [history, visitCountResult, visits, orders] = await Promise.all([
     application.user_id !== null
@@ -544,6 +548,12 @@ export default async function AdminApplicationDetailPage({
           slackId={application.user_slack_id ?? application.applicant_slack_id}
           fallbackName={application.user_name ?? application.name}
         />
+        <DetailRow label={t("admin.application-detail.applicant-fields.hackatime-trust-level")}>
+          <HackatimeTrustStatus
+            slackId={hackatimeSlackId}
+            trustLevel={hackatimeTrust?.trustLevel}
+          />
+        </DetailRow>
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.hca-id")} value={application.user_hca_id} mono />
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.verification-status")} value={application.verification_status} />
         <DetailFieldRow

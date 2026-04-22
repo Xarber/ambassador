@@ -18,7 +18,9 @@ import {
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { ReviewModeClient } from "@/components/admin/review-mode-client";
+import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
 import { Textarea } from "@/components/ui/textarea";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -260,6 +262,7 @@ export default async function ReviewModePage({
     dedupeRepeatedLastName(application.name) ??
     "Unknown";
   const slackId = application.user_slack_id ?? application.applicant_slack_id;
+  const hackatimeTrust = await getCachedHackatimeTrustLevel(slackId);
   const trimmedSlackId = slackId?.trim() ?? "";
   const slackProfileUrl = getSlackProfileUrl(slackId);
   const applicationNameLabel = getApplicationNameLabel(application.name);
@@ -304,7 +307,7 @@ export default async function ReviewModePage({
         {acceptedSameCity.length > 0 && (
           <div className="border border-[var(--acceptance)]/40 bg-[var(--acceptance)]/10 p-4">
             <p className="font-body text-sm text-white">
-              <span className="font-bold text-[var(--acceptance)]">Already accepted from {resolvedCity}:</span>{" "}
+              <span className="font-bold text-[var(--acceptance)]">{t("admin.application-detail.review.banners.already-accepted-from", { city: resolvedCity ?? "" })}</span>{" "}
               {acceptedSameCity.map((a, i) => (
                 <span key={a.id}>
                   {i > 0 && ", "}
@@ -325,7 +328,7 @@ export default async function ReviewModePage({
         {pendingOrRejectedSameCity.length > 0 && (
           <div className="border border-[var(--primary)]/40 bg-[var(--primary)]/10 p-4">
             <p className="font-body text-sm text-white">
-              <span className="font-bold text-[var(--primary)]">Other applications from {resolvedCity}:</span>{" "}
+              <span className="font-bold text-[var(--primary)]">{t("admin.application-detail.review.banners.other-applications-from", { city: resolvedCity ?? "" })}</span>{" "}
               {pendingOrRejectedSameCity.map((a, i) => (
                 <span key={a.id}>
                   {i > 0 && ", "}
@@ -376,7 +379,7 @@ export default async function ReviewModePage({
               href={`/admin/applications/${application.id}`}
               className="ui-open-link inline-flex items-center gap-1 whitespace-nowrap font-body text-lg leading-none"
             >
-              Open full application <span aria-hidden="true">↗</span>
+              {t("admin.application-detail.review.open-full-application")} <span aria-hidden="true">↗</span>
             </Link>
           </div>
           <div className="flex flex-wrap items-center gap-3 md:col-start-2 md:col-end-4 md:row-start-2">
@@ -393,30 +396,39 @@ export default async function ReviewModePage({
         <section className="border border-white/10 bg-card p-5">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <div className="text-xs text-secondary">Name</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.answers.name")}</div>
               <div className="font-body text-base text-white mt-1">
                 {applicationNameLabel}
                 {trimmedSlackId !== "" ? ` (${trimmedSlackId})` : ""}
               </div>
             </div>
             <div>
-              <div className="text-xs text-secondary">Age / Date of Birth</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.age-dob")}</div>
               <div className="font-body text-base text-white mt-1">
                 {age !== null ? `${age} years old` : ""}{application.date_of_birth ? ` (${formatDate(application.date_of_birth, locale)})` : " -"}
               </div>
             </div>
             <div>
-              <div className="text-xs text-secondary">City</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.city")}</div>
               <div className="font-body text-base text-white mt-1">{resolvedCity ?? "-"}</div>
             </div>
             <div>
-              <div className="text-xs text-secondary">Country</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.country")}</div>
               <div className="font-body text-base text-white mt-1">
                 {application.country_name ?? resolvedCountry ?? "-"}
               </div>
             </div>
             <div>
-              <div className="text-xs text-secondary">GitHub</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.hackatime-trust")}</div>
+              <div className="mt-1">
+                <HackatimeTrustStatus
+                  slackId={slackId}
+                  trustLevel={hackatimeTrust?.trustLevel}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.github")}</div>
               <div className="font-body text-base text-white mt-1">
                 {application.github_url ? (
                   <a
@@ -425,13 +437,13 @@ export default async function ReviewModePage({
                     rel="noopener noreferrer"
                     className="ui-hover-underline text-secondary hover:text-white focus-visible:text-white"
                   >
-                    Visit
+                    {t("admin.application-detail.review.fields.visit")}
                   </a>
                 ) : "-"}
               </div>
             </div>
             <div>
-              <div className="text-xs text-secondary">Portfolio</div>
+              <div className="text-xs text-secondary">{t("admin.application-detail.review.fields.portfolio")}</div>
               <div className="font-body text-base text-white mt-1">
                 {application.portfolio_url ? (
                   <a
@@ -440,7 +452,7 @@ export default async function ReviewModePage({
                     rel="noopener noreferrer"
                     className="ui-hover-underline text-secondary hover:text-white focus-visible:text-white"
                   >
-                    Visit
+                    {t("admin.application-detail.review.fields.visit")}
                   </a>
                 ) : "-"}
               </div>
@@ -450,16 +462,16 @@ export default async function ReviewModePage({
 
         {/* Application questions */}
         <section className="border border-white/10 bg-card p-5 space-y-5">
-          <h2 className="text-xl text-white">Application Questions</h2>
+          <h2 className="text-xl text-white">{t("admin.application-detail.review.sections.questions")}</h2>
           <div className="space-y-4">
             <div>
-              <div className="text-xs text-secondary mb-1">What is the first thing you would do as an ambassador?</div>
+              <div className="text-xs text-secondary mb-1">{t("admin.application-detail.review.questions.first-thing-do")}</div>
               <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-body text-base leading-relaxed text-white">
                 {application.application_first_thing_do ?? "-"}
               </p>
             </div>
             <div>
-              <div className="text-xs text-secondary mb-1">Where is the best place to put up a poster in your city?</div>
+              <div className="text-xs text-secondary mb-1">{t("admin.application-detail.review.questions.best-place-poster")}</div>
               <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-body text-base leading-relaxed text-white">
                 {application.application_best_place_poster ?? "-"}
               </p>
@@ -470,7 +482,7 @@ export default async function ReviewModePage({
         {/* Previous applications */}
         {history.length > 1 && (
           <section className="border border-white/10 bg-card p-5 space-y-3">
-            <h2 className="text-xl text-white">Previous Applications</h2>
+            <h2 className="text-xl text-white">{t("admin.application-detail.review.sections.previous-applications")}</h2>
             <div className="space-y-2">
               {history.map((entry) => (
                 <div key={entry.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 py-2 border-b border-white/5 last:border-0">
@@ -486,7 +498,7 @@ export default async function ReviewModePage({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="ui-open-link inline-flex items-center leading-none"
-                    aria-label="Open application"
+                    aria-label={t("admin.application-detail.review.open-application")}
                   >
                     <span aria-hidden="true">↗</span>
                   </Link>
@@ -551,7 +563,7 @@ export default async function ReviewModePage({
 
         {/* Actions menu */}
         <section className="border border-white/10 bg-card p-5">
-          <h2 className="text-xl text-white mb-4">Decision</h2>
+          <h2 className="text-xl text-white mb-4">{t("admin.application-detail.review.sections.decision")}</h2>
           <ReviewDecisionActions
             applicationId={application.id}
             canAccept={canAccept}

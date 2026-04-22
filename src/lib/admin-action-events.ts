@@ -6,6 +6,7 @@ export type AdminActionEvent =
   | "application_deleted"
   | "application_review_hold_updated"
   | "hcb_credentials_reauthorized"
+  | "global_safeguard_updated"
   | "application_tshirt_sent_updated"
   | "user_admin_password_rejected"
   | "user_demoted_from_admin"

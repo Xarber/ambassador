@@ -40,8 +40,7 @@ export function DetailFieldRow({
   const displayValue = value !== null && value !== undefined && value.trim() !== "" ? value : emptyValue;
 
   return (
-    <div className="grid gap-2 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-5">
-      <div className="text-sm text-secondary">{label}</div>
+    <DetailRow label={label}>
       <div
         className={cn(
           mono === true ? "font-body text-sm text-white" : "font-body text-base text-white",
@@ -51,6 +50,21 @@ export function DetailFieldRow({
       >
         {displayValue}
       </div>
+    </DetailRow>
+  );
+}
+
+export function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-5">
+      <div className="text-sm text-secondary">{label}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

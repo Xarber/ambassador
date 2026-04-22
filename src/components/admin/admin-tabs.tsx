@@ -13,6 +13,7 @@ export function AdminTabs() {
       {[
         { href: "/admin", label: t("dashboard") },
         { href: "/admin/audit-log", label: t("audit-log") },
+        { href: "/admin/safeguards", label: t("flags") },
         { href: "/admin/users", label: t("users") },
         { href: "/admin/orders", label: t("orders") },
         { href: "/admin/applications", label: t("applications") },

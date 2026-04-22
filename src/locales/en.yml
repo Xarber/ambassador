@@ -83,6 +83,8 @@ dashboard:
     title: "Complete onboarding first:"
     body: Finish ambassador onboarding to unlock your office grant and shirt order.
     cta: Complete onboarding
+    disabled-title: "Onboarding is paused:"
+    disabled-body: Ambassador onboarding is temporarily disabled. Please check back later-- we will reach out by email and/or Slack, and you will be able to continue after.
   rejected:
     eyebrow: Try Again
     title: Apply to be an Ambassador
@@ -340,6 +342,27 @@ admin:
     applications: Applications
     orders: Orders
     audit-log: Audit
+    flags: Flags
+  safeguards:
+    metadata:
+      title: Flags
+    title: Flags
+    columns:
+      toggle: Toggle
+      flag: Flag
+      description: Description
+    errors:
+      update-failed: Could not update that flag.
+    onboarding:
+      title: Onboarding
+      description: Allow accepted ambassadors to start onboarding from their dashboard.
+      enable: Turn on
+      disable: Turn off
+    shirt-ordering:
+      title: Shirt ordering
+      description: Allow ambassadors to place new shirt orders.
+      enable: Turn on
+      disable: Turn off
   audit-log:
     metadata:
       title: Audit log
@@ -518,6 +541,11 @@ admin:
     on-hold: On hold
     view-details: View details
     empty: No applications yet
+  hackatime-trust:
+    refresh-label: Refresh Hackatime trust level
+    refresh-tip: It's probably worth it to refresh sometimes but don't overuse this button! We will get ratelimited
+    refreshing: Refreshing...
+    refresh-failed: Refresh failed
   users-list:
     metadata:
       title: Users
@@ -622,6 +650,7 @@ admin:
       last-name: Last name
       email: Email
       slack: Slack
+      hackatime-trust-level: Hackatime trust level
       hca-id: HCA ID
       verification-status: Verification status
       street-address: Street address
@@ -641,6 +670,27 @@ admin:
       name: Name
       open: Open
       view: View
+    review:
+      open-full-application: Open full application
+      open-application: Open application
+      sections:
+        questions: Application Questions
+        previous-applications: Previous Applications
+        decision: Decision
+      fields:
+        age-dob: Age / Date of Birth
+        city: City
+        country: Country
+        hackatime-trust: Hackatime trust level
+        github: GitHub
+        portfolio: Portfolio
+        visit: Visit
+      questions:
+        first-thing-do: What is the first thing you would do as an ambassador?
+        best-place-poster: Where is the best place to put up a poster in your city?
+      banners:
+        already-accepted-from: "Already accepted from {city}:"
+        other-applications-from: "Other applications from {city}:"
     visits:
       unknown-network: Unknown network
       empty: No visits recorded yet.
@@ -731,6 +781,7 @@ admin:
       last-name: Last name
       email: Email
       slack: Slack
+      hackatime-trust-level: Hackatime trust level
       hca-id: HCA ID
       verification-status: Verification status
       street-address: Street address

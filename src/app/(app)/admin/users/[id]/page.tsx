@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 
 import { ApproveWithGrantForm } from "@/components/admin/approve-with-grant-form";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
-import { DetailFieldRow, DetailPager, DetailSection } from "@/components/admin/detail";
+import { DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
+import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { SuperuserPasswordForm } from "@/components/admin/superuser-password-form";
@@ -29,6 +30,7 @@ import {
   getOfficeGrantDashboardMessage,
   refreshOfficeGrantBalanceForUser,
 } from "@/lib/hcb/grants";
+import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { OFFICE_GRANT_AMOUNT_CENTS, OFFICE_GRANT_PURPOSE } from "@/lib/hcb/constants";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { ensureUserAddressSchema } from "@/lib/database/user-address-schema";
@@ -177,6 +179,7 @@ export default async function AdminUserDetailPage({
   const addresses = normalizeHackClubAddresses(
     liveAddresses.length > 0 ? liveAddresses : storedAddresses,
   );
+  const hackatimeTrust = await getCachedHackatimeTrustLevel(user.slack_id);
 
   const [
     latestApplication,
@@ -784,6 +787,12 @@ export default async function AdminUserDetailPage({
           slackId={user.slack_id}
           fallbackName={user.display_name}
         />
+        <DetailRow label={t("admin.user-detail.profile-fields.hackatime-trust-level")}>
+          <HackatimeTrustStatus
+            slackId={user.slack_id}
+            trustLevel={hackatimeTrust?.trustLevel}
+          />
+        </DetailRow>
         <DetailFieldRow label={t("admin.user-detail.profile-fields.hca-id")} value={user.hca_id} mono />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.verification-status")} value={user.verification_status} />
         <DetailFieldRow

@@ -5,6 +5,7 @@ import { loadUserHackClubAddresses } from "@/lib/hca-addresses";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { isSameOriginRequest } from "@/lib/http";
 import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
+import { getSafeguards } from "@/lib/safeguards";
 import { getSession } from "@/lib/session";
 import { canAccessShirts } from "@/lib/shirt/access";
 import {
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
   }
 
   await ensureSchema();
+  const safeguards = await getSafeguards();
+  if (!safeguards.shirtOrderingEnabled) {
+    return Response.json({ error: "unavailable" }, { status: 403 });
+  }
 
   const body: unknown = await request.json().catch(() => null);
 
