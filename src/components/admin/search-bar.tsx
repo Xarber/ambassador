@@ -20,7 +20,7 @@ export function SearchBar({
   return (
     <div className={`relative max-w-sm ${isPending ? "opacity-60" : ""}`}>
       <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-foreground/40">
-        <Icon glyph="search" size={18} />
+        <Icon glyph="search" size={24} />
       </span>
       <input
         type="search"

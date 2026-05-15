@@ -70,5 +70,13 @@ function getSafeguardAuditName(key: string) {
     return "onboarding";
   }
 
-  return "shirt ordering";
+  if (key === SAFEGUARD_KEYS.shirtOrderingEnabled) {
+    return "shirt ordering";
+  }
+
+  if (key === SAFEGUARD_KEYS.postersEnabled) {
+    return "posters";
+  }
+
+  return "referrals";
 }

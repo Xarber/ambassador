@@ -157,7 +157,7 @@ export default async function AdminUsersPage({
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-white">
+              <tr key={user.id} className="border-b border-white last:border-b-0">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <SlackAvatar

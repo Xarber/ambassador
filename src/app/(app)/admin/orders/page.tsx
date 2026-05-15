@@ -14,13 +14,16 @@ import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getHcbOauthConnection } from "@/lib/hcb/service";
 import {
+  buildEmptyShirtStockBySize,
   ORDER_STATUS_APPROVED,
   ORDER_STATUS_CANCELLED,
   ORDER_STATUS_FAILED,
   ORDER_STATUS_PENDING,
   ORDER_STATUS_REJECTED,
+  SHIRT_SIZES,
 } from "@/lib/shop";
 import { formatHackClubAddress, type HackClubAddress } from "@/lib/settings";
+import { loadShirtStockBySize } from "@/lib/warehouse";
 
 type OrderRow = {
   id: string;
@@ -76,7 +79,7 @@ export default async function AdminOrdersPage({
   const statusFilter = query.status?.trim() ?? "";
   const filterByStatus = statusFilter !== "" ? statusFilter : null;
 
-  const [orders, countResult, hcbConnection] = await Promise.all([
+  const [orders, countResult, hcbConnection, stockBySize] = await Promise.all([
     sql<OrderRow[]>`
       SELECT o.id, o.status, o.sku, o.variant, o.address, o.note, o.created_at,
              u.display_name AS user_name, u.email AS user_email,
@@ -112,6 +115,7 @@ export default async function AdminOrdersPage({
       )
     `,
     getHcbOauthConnection(),
+    loadShirtStockBySize().catch(() => buildEmptyShirtStockBySize()),
   ]);
 
   const totalCount = countResult.at(0)?.total ?? 0;
@@ -122,7 +126,23 @@ export default async function AdminOrdersPage({
     <div className="space-y-6">
       <header className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-4xl text-white">{t("admin.orders.title")}</h1>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-3">
+            <h1 className="text-4xl leading-none text-white">{t("admin.orders.title")}</h1>
+            <div className="flex flex-wrap items-center self-center gap-x-4 gap-y-2 font-body text-sm text-white tabular-nums">
+              {SHIRT_SIZES.map((size) => (
+                <div key={size} className="flex items-center gap-2">
+                  <span className="text-secondary">{size}</span>
+                  <span>
+                    {stockBySize[size] === null
+                      ? t("admin.orders.warehouse.stock-unavailable")
+                      : stockBySize[size] <= 0
+                        ? t("admin.orders.warehouse.stock-out")
+                        : t("admin.orders.warehouse.stock-left", { count: stockBySize[size] })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
           <ConfirmSubmitForm
             action="/api/admin/hcb/authorize"
             method="POST"
@@ -189,7 +209,7 @@ export default async function AdminOrdersPage({
           </thead>
           <tbody>
             {orders.map((order) => (
-              <tr key={order.id} className="border-b border-white align-top">
+              <tr key={order.id} className="border-b border-white last:border-b-0 align-top">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <SlackAvatar

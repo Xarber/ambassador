@@ -50,6 +50,7 @@ type AdminDashboardChartsProps = {
   activityData: DashboardActivityPoint[];
   decisionData: DashboardBreakdownPoint[];
   funnelData: DashboardFunnelPoint[];
+  referralDropOffData: DashboardBreakdownPoint[];
   pendingCount: number;
   locale: string;
   activeRange: string;
@@ -61,6 +62,7 @@ type AdminDashboardChartsProps = {
     decisionSplitTitle: string;
     applicationFlowEyebrow: string;
     applicationFlowTitle: string;
+    referralDropOffTitle: string;
     stillPending: string;
     visitsSeries: string;
     signupsSeries: string;
@@ -72,6 +74,7 @@ export function AdminDashboardCharts({
   activityData,
   decisionData,
   funnelData,
+  referralDropOffData,
   pendingCount,
   locale,
   activeRange,
@@ -121,7 +124,7 @@ export function AdminDashboardCharts({
             <DashboardResponsiveChart height={320}>
               <ComposedChart
                 data={activityData}
-                margin={{ top: 12, right: 12, left: -16, bottom: 0 }}
+                margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
               >
                 <XAxis
                   dataKey="label"
@@ -133,7 +136,8 @@ export function AdminDashboardCharts({
                   tick={{ fill: "var(--foreground)", fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
-                  width={28}
+                  width={32}
+                  allowDecimals={false}
                 />
                 <Tooltip
                   cursor={{ stroke: "var(--foreground)", strokeWidth: 1 }}
@@ -238,6 +242,43 @@ export function AdminDashboardCharts({
                 <Bar dataKey="value" radius={[0, 10, 10, 0]}>
                   {flowChartData.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </DashboardResponsiveChart>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6">
+        <div className="min-w-0">
+          <h2 className="mb-6 text-2xl text-white">{messages.referralDropOffTitle}</h2>
+          <div className="h-[20rem] min-w-0">
+            <DashboardResponsiveChart height={320}>
+              <BarChart
+                data={referralDropOffData}
+                layout="vertical"
+                margin={{ top: 8, right: 16, left: 12, bottom: 8 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={{ fill: "var(--foreground)", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, getBarChartAxisMax(referralDropOffData)]}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fill: "var(--foreground)", fontSize: 13 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={120}
+                />
+                <Tooltip cursor={false} content={<ChartTooltip locale={locale} />} />
+                <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                  {referralDropOffData.map((entry) => (
+                    <Cell key={entry.label} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>

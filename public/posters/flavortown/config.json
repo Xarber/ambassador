@@ -1,16 +1,25 @@
 {
-  "displayName": "Flavortown",
-  "redirectBaseUrl": "https://flavortown.hackclub.com",
+  "displayName": "Stardance",
+  "redirectBaseUrl": "https://stardance.hackclub.com",
   "templates": {
-    "color": "poster-color.pdf",
-    "bw": "poster-bw.pdf"
+    "color": "stardance.pdf",
+    "bw": "stardance-bw.pdf",
+    "printer_efficient": "stardance-bw.pdf",
+    "a4": "stardance-a4.pdf",
+    "a4_bw": "stardance-a4-bw.pdf"
   },
   "qrCoordinates": {
-    "color": { "x": 847, "y": 119, "size": 258 },
-    "bw": { "x": 530, "y": 122, "size": 218 }
+    "color": { "x": 471, "y": 36, "size": 119 },
+    "bw": { "x": 471, "y": 36, "size": 119 },
+    "printer_efficient": { "x": 471, "y": 36, "size": 119 },
+    "a4": { "x": 454, "y": 36, "size": 119 },
+    "a4_bw": { "x": 454, "y": 36, "size": 119 }
   },
   "referralTextCoordinates": {
-    "color": { "x": 595, "y": 62, "size": 18, "color": "FFFFFF" },
-    "bw": { "x": 595, "y": 62, "size": 18, "color": "000000" }
+    "color": { "x": 531, "y": 18, "size": 8, "color": "000000" },
+    "bw": { "x": 531, "y": 18, "size": 8, "color": "000000" },
+    "printer_efficient": { "x": 531, "y": 18, "size": 8, "color": "000000" },
+    "a4": { "x": 514, "y": 18, "size": 8, "color": "000000" },
+    "a4_bw": { "x": 514, "y": 18, "size": 8, "color": "000000" }
   }
 }

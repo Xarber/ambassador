@@ -2,7 +2,8 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "node:fs/promises";
 
 import {
-  buildPosterReferralUrl,
+  buildPosterScanUrl,
+  formatPosterReferralCode,
   getPosterRenderConfig,
   resolvePosterTemplatePath,
 } from "@/lib/posters/config";
@@ -74,7 +75,7 @@ export async function generatePosterPdf(options: {
     height: qrConfig.size,
   });
 
-  const referralText = `Ref: ${options.referralCode}`;
+  const referralText = `Ref: ${formatPosterReferralCode(options.referralCode)}`;
   const textWidth = font.widthOfTextAtSize(referralText, textConfig.size);
   page.drawText(referralText, {
     x: textConfig.x - textWidth / 2,
@@ -94,7 +95,7 @@ export async function generateMergedPosterGroupPdf(posters: PosterRow[]) {
     const bytes = await generatePosterPdf({
       campaignSlug: poster.campaign_slug,
       style: poster.poster_type,
-      content: buildPosterReferralUrl(poster.referral_code),
+      content: buildPosterScanUrl(poster.qr_code_token),
       referralCode: poster.referral_code,
     });
     const single = await PDFDocument.load(bytes);

@@ -79,9 +79,9 @@ export function SafeguardsClient({
               const pending = pendingKey === control.key;
 
               return (
-                <tr key={control.key} className="border-b border-white">
+                <tr key={control.key} className="border-b border-white last:border-b-0">
                   <td className="px-5 py-4 font-body text-base text-white">{control.title}</td>
-                  <td className="px-5 py-4 font-body text-sm text-secondary">{control.description}</td>
+                  <td className="px-5 py-4 font-body text-sm text-foreground">{control.description}</td>
                   <td className="px-5 py-4 text-center">
                     <button
                       type="button"

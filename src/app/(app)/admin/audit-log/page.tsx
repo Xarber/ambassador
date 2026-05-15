@@ -184,7 +184,7 @@ export default async function AdminAuditLogPage({
           </thead>
           <tbody>
             {events.map((event) => (
-              <tr key={event.id} className="border-b border-white">
+              <tr key={event.id} className="border-b border-white last:border-b-0">
                 <td className="px-5 py-4 font-body text-base text-white">
                   {formatEventType(event.action)}
                 </td>

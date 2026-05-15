@@ -6,8 +6,10 @@ import { Navbar } from "@/components/navbar";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import sql from "@/lib/database/client";
 import { canAccessPosters, getPosterAccessState } from "@/lib/posters/access";
+import { getSafeguards } from "@/lib/safeguards";
 import { getSession } from "@/lib/session";
 import { ensureUserAddressSchema } from "@/lib/database/user-address-schema";
+import { canAccessStardanceReferrals } from "@/lib/stardance-referrals";
 
 import SettingsClient from "./SettingsClient";
 
@@ -36,7 +38,7 @@ export default async function SettingsPage() {
   const t = await getTranslations();
   await ensureUserAddressSchema();
 
-  const [settingsUser, posterAccessState] = await Promise.all([
+  const [settingsUser, posterAccessState, safeguards] = await Promise.all([
     sql<SettingsUserRow[]>`
       SELECT
         display_name, email, hca_first_name, hca_last_name,
@@ -46,6 +48,7 @@ export default async function SettingsPage() {
       FROM users WHERE id = ${session.sub}
     `.then((rows) => rows.at(0) ?? null),
     getPosterAccessState(session.sub),
+    getSafeguards(),
   ]);
 
   if (!settingsUser) {
@@ -53,7 +56,11 @@ export default async function SettingsPage() {
   }
 
   const canAccessAdmin = Boolean(session.impersonator) || Boolean(settingsUser.is_admin ?? session.isAdmin);
-  const showPostersLink = posterAccessState !== null && canAccessPosters({
+  const showPostersLink = safeguards.postersEnabled && posterAccessState !== null && canAccessPosters({
+    latestApplicationStatus: posterAccessState.latest_application_status,
+    manualDashboardState: posterAccessState.manual_dashboard_state,
+  });
+  const showReferralsLink = safeguards.referralsEnabled && posterAccessState !== null && canAccessStardanceReferrals({
     latestApplicationStatus: posterAccessState.latest_application_status,
     manualDashboardState: posterAccessState.manual_dashboard_state,
   });
@@ -64,6 +71,7 @@ export default async function SettingsPage() {
         isAdmin={canAccessAdmin}
         balanceCents={settingsUser.balance_cents ?? 0}
         showPostersLink={showPostersLink}
+        showReferralsLink={showReferralsLink}
       />
       <div className="mx-auto max-w-2xl px-6 py-12">
         <h1 className="text-4xl text-white">{t("settings.heading")}</h1>

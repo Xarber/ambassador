@@ -10,6 +10,7 @@ import type {
 
 const DEFAULT_CURRENT_DOMAIN = "http://localhost:7171";
 const projectRoot = /* turbopackIgnore: true */ process.cwd();
+const publicPosterRoot = path.join(projectRoot, "public", "posters");
 
 export const DEFAULT_POSTER_CAMPAIGN = optionalEnv("POSTER_DEFAULT_CAMPAIGN") ?? "default";
 
@@ -22,15 +23,17 @@ type PosterCampaignConfigFile = {
 };
 
 const defaultTemplateFilenames: Record<PosterStyle, string> = {
-  color: "poster-color.pdf",
-  bw: "poster-bw.pdf",
-  printer_efficient: "poster-printer_efficient.pdf",
+  color: "stardance.pdf",
+  bw: "stardance-bw.pdf",
+  printer_efficient: "stardance-bw.pdf",
+  a4: "stardance-a4.pdf",
+  a4_bw: "stardance-a4-bw.pdf",
 };
 
 function posterTemplateRoots() {
   return [
     optionalEnv("POSTER_TEMPLATE_ROOT"),
-    path.join(projectRoot, "public", "posters"),
+    publicPosterRoot,
   ].filter((value): value is string => Boolean(value));
 }
 
@@ -145,17 +148,32 @@ export function getPosterRenderConfig(
   };
 }
 
+export function normalizePosterReferralCode(referralCode: string) {
+  const code = referralCode.trim().toUpperCase();
+  return code.startsWith("A!") ? code.slice(2) : code;
+}
+
+export function formatPosterReferralCode(referralCode: string) {
+  const code = normalizePosterReferralCode(referralCode);
+  return /^[A-Z1-9]{5}$/.test(code) ? `a!${code}` : code;
+}
+
 export function buildPosterReferralUrl(referralCode: string) {
-  return `${optionalEnv("CURRENT_DOMAIN") ?? DEFAULT_CURRENT_DOMAIN}/p/${encodeURIComponent(referralCode)}`;
+  return `${optionalEnv("CURRENT_DOMAIN") ?? DEFAULT_CURRENT_DOMAIN}/p/${encodeURIComponent(formatPosterReferralCode(referralCode))}`;
+}
+
+export function buildPosterScanUrl(qrCodeToken: string) {
+  return `${optionalEnv("CURRENT_DOMAIN") ?? DEFAULT_CURRENT_DOMAIN}/p/${encodeURIComponent(qrCodeToken)}`;
 }
 
 export type PosterCampaignSummary = {
   slug: string;
   displayName: string;
   styles: PosterStyle[];
+  previewUrls: Partial<Record<PosterStyle, string>>;
 };
 
-const AVAILABLE_STYLES: PosterStyle[] = ["color", "bw", "printer_efficient"];
+const AVAILABLE_STYLES: PosterStyle[] = ["color", "bw", "a4", "a4_bw"];
 
 export function listPosterCampaigns(): PosterCampaignSummary[] {
   const seen = new Map<string, PosterCampaignSummary>();
@@ -192,7 +210,17 @@ export function listPosterCampaigns(): PosterCampaignSummary[] {
           ? config.displayName
           : slug.charAt(0).toUpperCase() + slug.slice(1);
 
-      seen.set(slug, { slug, displayName, styles });
+      const previewUrls = Object.fromEntries(
+        styles.flatMap((style) => {
+          const filename = config.templates?.[style] ?? defaultTemplateFilenames[style];
+          const previewFilename = filename.replace(/\.pdf$/i, ".webp");
+          const publicPreview = path.join(publicPosterRoot, slug, previewFilename);
+          if (!fs.existsSync(publicPreview)) return [];
+          return [[style, `/posters/${encodeURIComponent(slug)}/${encodeURIComponent(previewFilename)}`]];
+        }),
+      ) as Partial<Record<PosterStyle, string>>;
+
+      seen.set(slug, { slug, displayName, styles, previewUrls });
     }
   }
 

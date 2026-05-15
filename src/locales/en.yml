@@ -22,6 +22,7 @@ app:
     logo-alt: Ambassador
     admin-link: Admin
     posters-link: Posters
+    referrals-link: Referrals
     settings-label: Settings
     sign-out-label: Sign out
   impersonation:
@@ -51,6 +52,9 @@ dashboard:
   metadata:
     title: Dashboard
   heading: "Hey, {name}!"
+  mock-onboarding-alert:
+    title: "Admin override:"
+    body: "You don't have a linked onboarding record, so this view uses mock onboarding data. {hcbEmail} stands in for hcb_email."
   stepper:
     apply: Apply
     verify: Verify ID
@@ -132,8 +136,27 @@ posters:
   metadata:
     title: Posters
   heading: Posters
-  subheading: Print, post, scan, verify — spread the word
+  subheading: Spread the word!
   unavailable: Coming soon!
+  stats:
+    total: total
+    verified: verified
+    pending: pending
+  scan-prompt:
+    title: "{count, plural, one {# poster} other {# posters}} ready to verify"
+    body: Put them up as soon as possible, and be prepared to take a picture!
+    cta: Scan a poster
+  sections:
+    new: New posters
+  group-card:
+    add-button: "Add posters ({remaining} allowed)"
+  capture:
+    title: Snap the QR code
+    body: Point your camera at the poster and make sure the entire poster and especially the QR code are clearly visible, then capture.
+    capture-button: Capture
+    flip-camera: Flip camera
+    camera-unavailable: Camera is not available in this browser.
+    camera-denied: Could not access the camera. Allow camera access and try again.
   campaign:
     label: Campaign
     placeholder: Pick a campaign
@@ -141,7 +164,9 @@ posters:
   styles:
     color: Full colour
     bw: Black & white
-    printer_efficient: Printer-friendly
+    printer_efficient: Black & white
+    a4: A4 colour
+    a4_bw: A4 B&W
   actions:
     create-poster: New poster
     create-group: New group
@@ -174,7 +199,8 @@ posters:
     rejected: Rejected
     digital: Digital
   verify-modal:
-    title: Verify this poster
+    eyebrow: Poster verification
+    title: Verify a poster
     description: Put the poster up, snap a photo showing the QR code clearly, and pin your location.
     location-description-label: Location description
     location-description-placeholder: e.g. Cafeteria notice board at Lincoln High
@@ -189,7 +215,7 @@ posters:
     success: Poster verified automatically.
     auto_matched: We matched this photo to a different pending poster of yours and verified it.
     already_verified: This poster has already been verified.
-    in_review: Sent to review — a human will check it soon.
+    in_review: Sent to review, a human will check it soon.
     no_qr: We could not read a QR code. Try again with a clearer photo.
     no_match: The QR code did not match any of your pending posters.
     wrong_group: That QR belongs to a different group or poster.
@@ -197,10 +223,71 @@ posters:
     create-failed: Could not create poster.
     load-failed: Could not load your posters.
     download-failed: Download failed.
-    upload-failed: Submission failed.
+    upload-failed: Could not detect any poster, please try again!
     invalid-image-format: Unsupported image format. Use {formats}.
     geolocation-unavailable: Your browser does not support geolocation.
     geolocation-denied: Precise location access was denied. Please enable it in your browser settings.
+
+referrals:
+  metadata:
+    title: Referrals
+  heading: Your referrals
+  subheading: Find your referral links here.
+  unavailable: Coming soon!
+  codes:
+    heading: Referral codes
+    description: You can make extra referral codes too and you can track them here!also
+    primary-heading: Primary
+    link-label: Share link
+    copy: Copy link
+    copied: Copied
+    copy-aria: Copy share link
+    rename-aria: Rename code
+    delete-aria: Delete code
+    delete-confirm: Delete this referral code? It'll move to your archive. The link keeps working and you can restore it any time.
+    rename-save: Save
+    rename-cancel: Cancel
+    uses: "{count, plural, one {# use} other {# uses}}"
+  archive:
+    heading: Archived codes
+    description: Archived codes still work and you can put them back in the main list at any time.
+    restore-aria: Restore code
+  creator:
+    description: Make another code & label it so you can share a different link in different places.
+    label: Group label
+    placeholder: e.g. Robotics club
+    action: Create code
+    creating: Creating...
+  empty:
+    title: No referrals yet
+    body: When someone signs up through your link, they'll show up here with their hours and verification status.
+  errors:
+    create-failed: Could not create referral code.
+    label-required: Referral code label is required.
+    rename-failed: Could not rename referral code.
+    delete-failed: Could not delete referral code.
+    restore-failed: Could not restore referral code.
+  table:
+    name: Name
+    code: Code
+    slack: Slack
+    email: Email
+    hours-logged: Hours logged
+    hours-approved: Hours approved
+    verification: Verification
+    filter-label: Search referrals
+    filter-placeholder: Search by code, name, or email
+    status-filter-label: Filter by status
+    status-filter-all: All statuses
+    no-results: No referrals match that filter.
+    pagination-prev: Previous page
+    pagination-next: Next page
+    pagination-range: "{from}–{to} of {total}"
+    status:
+      verified: Verified
+      pending: Pending
+      unverified: Unverified
+      rejected: Rejected
 
 shirt:
   heading: Order a shirt!
@@ -218,7 +305,7 @@ shirt:
     shipping-address: Shipping address
   stock:
     left: "{count} left"
-    out: Out
+    out: Out of stock
     none: Shirts are out of stock right now.
   no-address:
     body: You don't have a shipping address on file yet. Add one on Hack Club Auth, then come back here.
@@ -380,6 +467,16 @@ admin:
       description: Allow ambassadors to place new shirt orders.
       enable: Turn on
       disable: Turn off
+    posters:
+      title: Posters
+      description: Allow approved ambassadors to access the posters feature.
+      enable: Turn on
+      disable: Turn off
+    referrals:
+      title: Referrals
+      description: Allow approved ambassadors to view their referral code and stats.
+      enable: Turn on
+      disable: Turn off
   audit-log:
     metadata:
       title: Audit log
@@ -443,6 +540,13 @@ admin:
       application-flow-title: Application flow
       no-flow-data: No flow data yet.
       still-pending: Still pending
+      referral-drop-off-title: Referrals
+      referrals:
+        total: Total referrals
+        unverified: Unverified
+        pending: Pending
+        verified: Verified
+        rejected: Rejected
       ranges:
         seven-days: 7 days
         fourteen-days: 14 days
@@ -471,6 +575,10 @@ admin:
     warehouse:
       crunching: Crunching numbers...
       empty: No completed orders yet.
+      stock-label: Shirt stock
+      stock-left: "{count} left"
+      stock-out: Out
+      stock-unavailable: Unavailable
       expenditure-label: Total expenditure (completed)
       contents: Contents
       labor: Labor

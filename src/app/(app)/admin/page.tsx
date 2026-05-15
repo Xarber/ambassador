@@ -40,6 +40,14 @@ type OutcomeSummaryRow = {
   banned_count: number;
 };
 
+type ReferralDropOffRow = {
+  total_count: number;
+  unverified_count: number;
+  pending_count: number;
+  verified_count: number;
+  rejected_count: number;
+};
+
 const activityRangeDays = {
   "7d": 7,
   "14d": 14,
@@ -74,7 +82,7 @@ export default async function AdminDashboard({
     day: "numeric",
   });
 
-  const [summaryRows, activityRows, outcomeRows] = await Promise.all([
+  const [summaryRows, activityRows, outcomeRows, referralDropOffRows] = await Promise.all([
     sql<SummaryRow[]>`
       SELECT
         (
@@ -161,10 +169,26 @@ export default async function AdminDashboard({
         )::int AS banned_count
       FROM applications
     `,
+    sql<ReferralDropOffRow[]>`
+      SELECT
+        COUNT(*)::int AS total_count,
+        COUNT(*) FILTER (WHERE verification_status = 'unverified')::int AS unverified_count,
+        COUNT(*) FILTER (WHERE verification_status = 'pending')::int AS pending_count,
+        COUNT(*) FILTER (WHERE verification_status = 'verified')::int AS verified_count,
+        COUNT(*) FILTER (WHERE verification_status = 'rejected')::int AS rejected_count
+      FROM stardance_referrals
+    `,
   ]);
 
   const summary = summaryRows[0];
   const outcomeSummary = outcomeRows[0];
+  const referralDropOff = referralDropOffRows[0] ?? {
+    total_count: 0,
+    unverified_count: 0,
+    pending_count: 0,
+    verified_count: 0,
+    rejected_count: 0,
+  };
 
   const activityData: DashboardActivityPoint[] = activityRows.map((row) => ({
     label: activityLabelFormatter.format(new Date(row.day)),
@@ -193,6 +217,29 @@ export default async function AdminDashboard({
       label: t("admin.overview.charts.series.banned"),
       value: outcomeSummary.banned_count,
       fill: "var(--chart-banned)",
+    },
+  ];
+
+  const referralDropOffData: DashboardBreakdownPoint[] = [
+    {
+      label: t("admin.overview.charts.referrals.total"),
+      value: referralDropOff.total_count,
+      fill: "var(--chart-visits)",
+    },
+    {
+      label: t("admin.overview.charts.referrals.unverified"),
+      value: referralDropOff.unverified_count,
+      fill: "var(--chart-pending)",
+    },
+    {
+      label: t("admin.overview.charts.referrals.pending"),
+      value: referralDropOff.pending_count,
+      fill: "var(--chart-applications)",
+    },
+    {
+      label: t("admin.overview.charts.referrals.verified"),
+      value: referralDropOff.verified_count,
+      fill: "var(--chart-approved)",
     },
   ];
 
@@ -274,6 +321,7 @@ export default async function AdminDashboard({
         activityData={activityData}
         decisionData={decisionData}
         funnelData={funnelData}
+        referralDropOffData={referralDropOffData}
         pendingCount={outcomeSummary.pending_count}
         locale={locale}
         activeRange={activeRange}
@@ -290,6 +338,7 @@ export default async function AdminDashboard({
           decisionSplitTitle: t("admin.overview.charts.decision-split-title"),
           applicationFlowEyebrow: t("admin.overview.charts.application-flow-eyebrow"),
           applicationFlowTitle: t("admin.overview.charts.application-flow-title"),
+          referralDropOffTitle: t("admin.overview.charts.referral-drop-off-title"),
           stillPending: t("admin.overview.charts.still-pending"),
           visitsSeries: t("admin.overview.charts.series.visits"),
           signupsSeries: t("admin.overview.charts.series.signups"),

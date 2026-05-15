@@ -14,11 +14,13 @@ export async function Navbar({
   isAdmin = false,
   balanceCents = 0,
   showPostersLink = false,
+  showReferralsLink = false,
   showBottomBorder = true,
 }: {
   isAdmin?: boolean;
   balanceCents?: number;
   showPostersLink?: boolean;
+  showReferralsLink?: boolean;
   showBottomBorder?: boolean;
 }) {
   const t = await getTranslations();
@@ -27,12 +29,12 @@ export async function Navbar({
   return (
     <nav
       className={cn(
-        "bg-[var(--topbar)] px-6 py-4",
+        "bg-[var(--topbar)] px-3 py-4 sm:px-6",
         showBottomBorder && "border-b border-foreground/10",
       )}
     >
-      <div className="mx-auto flex max-w-5xl items-center justify-between">
-        <a href="/dashboard" className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
+        <a href="/dashboard" className="flex shrink-0 items-center gap-3">
           <Image
             src="/dashboard-logo.avif"
             alt={t("app.navbar.logo-alt")}
@@ -42,14 +44,14 @@ export async function Navbar({
             sizes="2.25rem"
           />
         </a>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-9 items-center rounded-lg px-3 text-base tracking-wide text-acceptance">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <span className="inline-flex h-9 items-center rounded-lg px-2 text-sm tracking-wide text-acceptance sm:px-3 sm:text-base">
             {balance}
           </span>
           {isAdmin && (
             <a
               href="/admin"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-base tracking-wide text-accent transition-opacity hover:opacity-70"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-sm tracking-wide text-accent transition-opacity hover:opacity-70 sm:px-3 sm:text-base"
             >
               {t("app.navbar.admin-link")}
             </a>
@@ -57,9 +59,17 @@ export async function Navbar({
           {showPostersLink ? (
             <a
               href="/posters"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-base tracking-wide text-white transition-opacity hover:opacity-70"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-sm tracking-wide text-white transition-opacity hover:opacity-70 sm:px-3 sm:text-base"
             >
               {t("app.navbar.posters-link")}
+            </a>
+          ) : null}
+          {showReferralsLink ? (
+            <a
+              href="/referrals"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-sm tracking-wide text-white transition-opacity hover:opacity-70 sm:px-3 sm:text-base"
+            >
+              {t("app.navbar.referrals-link")}
             </a>
           ) : null}
           <a

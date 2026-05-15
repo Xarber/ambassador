@@ -4,6 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { useTranslations } from "next-intl";
 
+import { SHIRT_SIZES, type ShirtStockBySize } from "@/lib/shop";
+
 type WarehouseStatsData = {
   expenditure: {
     contents: number;
@@ -12,6 +14,7 @@ type WarehouseStatsData = {
     total: number;
   };
   completedOrders: number;
+  stockBySize: ShirtStockBySize;
 };
 
 type PieSlice = {
@@ -27,6 +30,7 @@ function isWarehouseStatsData(value: unknown): value is WarehouseStatsData {
 
   const expenditure = Reflect.get(value, "expenditure");
   const completedOrders = Reflect.get(value, "completedOrders");
+  const stockBySize = Reflect.get(value, "stockBySize");
 
   return (
     typeof expenditure === "object" &&
@@ -35,7 +39,14 @@ function isWarehouseStatsData(value: unknown): value is WarehouseStatsData {
     typeof Reflect.get(expenditure, "labor") === "number" &&
     typeof Reflect.get(expenditure, "postage") === "number" &&
     typeof Reflect.get(expenditure, "total") === "number" &&
-    typeof completedOrders === "number"
+    typeof completedOrders === "number" &&
+    typeof stockBySize === "object" &&
+    stockBySize !== null &&
+    SHIRT_SIZES.every((size) => {
+      const stock = Reflect.get(stockBySize, size);
+
+      return typeof stock === "number" || stock === null;
+    })
   );
 }
 

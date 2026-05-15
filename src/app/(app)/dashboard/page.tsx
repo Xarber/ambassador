@@ -33,6 +33,7 @@ import { canAccessPosters } from "@/lib/posters/access";
 import { getSafeguards } from "@/lib/safeguards";
 import { getSession } from "@/lib/session";
 import { canAccessShirts } from "@/lib/shirt/access";
+import { canAccessStardanceReferrals } from "@/lib/stardance-referrals";
 import {
   resolveAmbassadorRegion,
   type HackClubAddress,
@@ -156,7 +157,9 @@ export default async function DashboardPage({
     canAccessShirtOrdering &&
     (!shirtOnboardingStatus.hasAmbassadorRecord ||
       !shirtOnboardingStatus.isOnboardingComplete);
-  const shouldLoadShirtAddresses = canUseShirts && !shirtRequiresOnboarding;
+  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user.is_admin ?? session.isAdmin);
+  const canUseSelector = canShowDevAdminSelector(canAccessAdmin);
+  const shouldLoadShirtAddresses = canUseShirts && (!shirtRequiresOnboarding || canUseSelector);
   let shirtNeedsAddressRefresh = false;
   let shirtAddresses: HackClubAddress[] = [];
   let shirtStockBySize = buildEmptyShirtStockBySize();
@@ -204,8 +207,6 @@ export default async function DashboardPage({
     stockBySize: shirtStockBySize,
   };
 
-  const canAccessAdmin = Boolean(session.impersonator) || Boolean(user.is_admin ?? session.isAdmin);
-  const canUseSelector = canShowDevAdminSelector(canAccessAdmin);
   const officeGrant = await refreshOfficeGrantBalanceForUser(session.sub);
   const stateInput = {
     application,
@@ -223,13 +224,30 @@ export default async function DashboardPage({
   const resolved = canUseSelector && selectedDevState !== null
     ? resolveState({ ...stateInput, activeDevState: selectedDevState })
     : baseResolved;
+  const onboardingDevStates: DevState[] = [
+    "accepted-not-onboarded",
+    "accepted-onboarding-submitted",
+    "accepted-pending-signature",
+    "accepted-onboarding-completed",
+    "accepted-grant-failed",
+  ];
+  const showMockOnboardingAlert =
+    canUseSelector &&
+    selectedDevState !== null &&
+    onboardingDevStates.includes(selectedDevState) &&
+    !shirtOnboardingStatus.hasAmbassadorRecord;
+  const mockHcbEmail = session.email ?? "your account email";
 
   return (
     <main className="page-shell">
       <Navbar
         isAdmin={canAccessAdmin}
         balanceCents={user.balance_cents ?? 0}
-        showPostersLink={canAccessPosters({
+        showPostersLink={safeguards.postersEnabled && canAccessPosters({
+          latestApplicationStatus: application?.status ?? null,
+          manualDashboardState: user.manual_dashboard_state,
+        })}
+        showReferralsLink={safeguards.referralsEnabled && canAccessStardanceReferrals({
           latestApplicationStatus: application?.status ?? null,
           manualDashboardState: user.manual_dashboard_state,
         })}
@@ -252,6 +270,17 @@ export default async function DashboardPage({
           <div className="mt-8">
             <JourneyStepper activeStep={resolved.activeStep} decision={resolved.decision} t={t} />
           </div>
+        ) : null}
+
+        {showMockOnboardingAlert ? (
+          <section className="mt-6 border border-accent/40 bg-accent/10 p-4">
+            <p className="font-body text-sm leading-relaxed text-foreground">
+              <span className="font-bold text-accent">
+                {t("dashboard.mock-onboarding-alert.title")}
+              </span>{" "}
+              {t("dashboard.mock-onboarding-alert.body", { hcbEmail: mockHcbEmail })}
+            </p>
+          </section>
         ) : null}
 
         <div className="mt-6">{resolved.node}</div>
@@ -447,7 +476,7 @@ function resolveState({
           onboardingEnabled={onboardingEnabled}
           shirt={{
             ...shirt,
-            requiresOnboarding: true,
+            requiresOnboarding: false,
             onboardingStatus: AMBASSADOR_ONBOARDING_STATUS.completed,
           }}
           t={t}
@@ -612,6 +641,10 @@ function OnboardingPromptBanner({
   onboardingFormUrl: string;
   t: DashboardTranslations;
 }) {
+  if (status === AMBASSADOR_ONBOARDING_STATUS.completed) {
+    return null;
+  }
+
   if (status !== AMBASSADOR_ONBOARDING_STATUS.unsubmitted) {
     const statusKey = getOnboardingStatusMessageKey(status);
 

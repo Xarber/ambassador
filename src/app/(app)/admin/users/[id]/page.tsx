@@ -852,7 +852,7 @@ export default async function AdminUserDetailPage({
               </thead>
               <tbody>
                 {applications.map((application) => (
-                  <tr key={application.id} className="border-b border-white">
+                  <tr key={application.id} className="border-b border-white last:border-b-0">
                     <td className="px-0 py-4 font-body text-sm text-white">{formatDateTime(application.created_at, locale)}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">

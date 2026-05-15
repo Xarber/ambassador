@@ -158,30 +158,3 @@ export async function findReferralLinkByCode(code: string) {
 
   return link ?? null;
 }
-
-export async function recordReferralLinkClick(input: {
-  referralLinkId: string;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  referrer?: string | null;
-  metadata?: Record<string, unknown>;
-}) {
-  await sql`
-    INSERT INTO referral_link_clicks (
-      id,
-      referral_link_id,
-      ip_address,
-      user_agent,
-      referrer,
-      metadata
-    )
-    VALUES (
-      ${crypto.randomUUID()},
-      ${input.referralLinkId},
-      ${input.ipAddress ?? null},
-      ${input.userAgent ?? null},
-      ${input.referrer ?? null},
-      CAST(${JSON.stringify(input.metadata ?? {})} AS JSONB)
-    )
-  `;
-}

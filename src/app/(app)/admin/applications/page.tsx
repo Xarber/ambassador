@@ -198,7 +198,7 @@ export default async function AdminApplicationsPage({
               const applicationName = dedupeRepeatedLastName(application.name) ?? "-";
 
               return (
-                <tr key={application.id} className="border-b border-white">
+                <tr key={application.id} className="border-b border-white last:border-b-0">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">

@@ -1,4 +1,4 @@
-export const POSTER_STYLES = ["color", "bw", "printer_efficient"] as const;
+export const POSTER_STYLES = ["color", "bw", "printer_efficient", "a4", "a4_bw"] as const;
 export const POSTER_VERIFICATION_STATUSES = [
   "pending",
   "in_review",
@@ -8,8 +8,9 @@ export const POSTER_VERIFICATION_STATUSES = [
 ] as const;
 export const POSTER_GROUP_CHARSETS = ["alphanumeric", "numeric", "alpha"] as const;
 
-export const MAX_POSTERS_PER_GROUP = 10;
-export const REFERRAL_CODE_LENGTH = 8;
+export const MAX_POSTERS_PER_GROUP = 20;
+export const MAX_POSTERS_PER_USER = 5000;
+export const REFERRAL_CODE_LENGTH = 5;
 
 export type PosterStyle = (typeof POSTER_STYLES)[number];
 export type PosterVerificationStatus = (typeof POSTER_VERIFICATION_STATUSES)[number];
@@ -89,6 +90,7 @@ export type CreatePosterInput = {
   posterType?: PosterStyle;
   posterGroupId?: string | null;
   charset?: PosterGroupCharset;
+  metadata?: PosterMetadata;
 };
 
 export type CreatePosterGroupInput = {
@@ -104,7 +106,7 @@ export type SubmitPosterProofInput = {
   userId: string;
   posterId: string;
   file: File;
-  locationDescription: string;
+  locationDescription?: string | null;
   latitude: number;
   longitude: number;
   locationAccuracy?: number | null;

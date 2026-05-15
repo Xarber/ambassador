@@ -3,7 +3,8 @@ import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { isSameOriginRequest } from "@/lib/http";
 import { getActorSession } from "@/lib/session";
-import { WarehouseApiClient } from "@/lib/warehouse";
+import { buildEmptyShirtStockBySize, type ShirtStockBySize } from "@/lib/shop";
+import { loadShirtStockBySize, WarehouseApiClient } from "@/lib/warehouse";
 
 type LinkedOrderRow = {
   warehouse_order_id: string;
@@ -17,6 +18,7 @@ type CachedStats = {
     total: number;
   };
   completedOrders: number;
+  stockBySize: ShirtStockBySize;
 };
 
 let cached: { data: CachedStats; expiresAt: number } | null = null;
@@ -40,13 +42,14 @@ export async function GET(request: Request) {
     return Response.json(cached.data);
   }
 
-  const [warehouseOrders, linkedOrderRows] = await Promise.all([
+  const [warehouseOrders, linkedOrderRows, stockBySize] = await Promise.all([
     new WarehouseApiClient().listOrders(),
     sql<LinkedOrderRow[]>`
       SELECT warehouse_order_id
       FROM orders
       WHERE warehouse_order_id IS NOT NULL
     `,
+    loadShirtStockBySize().catch(() => buildEmptyShirtStockBySize()),
   ]);
 
   const ambassadorOrderIds = new Set(
@@ -75,6 +78,7 @@ export async function GET(request: Request) {
       total: contentsCost + laborCost + postageCost,
     },
     completedOrders: completedCount,
+    stockBySize,
   };
 
   cached = { data, expiresAt: Date.now() + 5 * 60 * 1000 };

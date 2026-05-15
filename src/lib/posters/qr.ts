@@ -1,7 +1,11 @@
 import QRCode from "qrcode";
 
 import { optionalEnv } from "@/lib/env";
-import { buildPosterReferralUrl } from "@/lib/posters/config";
+import {
+  buildPosterReferralUrl,
+  buildPosterScanUrl,
+  formatPosterReferralCode,
+} from "@/lib/posters/config";
 import type { PosterRow } from "@/lib/posters/types";
 
 export async function generateQrCodePng(content: string, size: number) {
@@ -99,12 +103,19 @@ function normalizeQrValue(value: string) {
 
 export function findMatchingPoster(detectedCodes: string[], posters: PosterRow[]) {
   return posters.find((poster) => {
-    const posterUrl = normalizeQrValue(buildPosterReferralUrl(poster.referral_code));
+    const posterUrl = normalizeQrValue(buildPosterScanUrl(poster.qr_code_token));
+    const legacyPosterUrl = normalizeQrValue(buildPosterReferralUrl(poster.referral_code));
     const posterCode = poster.referral_code.toLowerCase();
+    const displayCode = formatPosterReferralCode(poster.referral_code).toLowerCase();
 
     return detectedCodes.some((entry) => {
       const normalized = normalizeQrValue(entry);
-      return normalized === posterUrl || normalized.includes(posterCode);
+      return (
+        normalized === posterUrl ||
+        normalized === legacyPosterUrl ||
+        normalized.includes(posterCode) ||
+        normalized.includes(displayCode)
+      );
     });
   }) ?? null;
 }

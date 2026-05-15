@@ -43,6 +43,22 @@ export default async function AdminSafeguardsPage() {
             enableAction: t("admin.safeguards.shirt-ordering.enable"),
             disableAction: t("admin.safeguards.shirt-ordering.disable"),
           },
+          {
+            key: SAFEGUARD_KEYS.postersEnabled,
+            title: t("admin.safeguards.posters.title"),
+            description: t("admin.safeguards.posters.description"),
+            enabled: stateByKey.get(SAFEGUARD_KEYS.postersEnabled)?.enabled ?? true,
+            enableAction: t("admin.safeguards.posters.enable"),
+            disableAction: t("admin.safeguards.posters.disable"),
+          },
+          {
+            key: SAFEGUARD_KEYS.referralsEnabled,
+            title: t("admin.safeguards.referrals.title"),
+            description: t("admin.safeguards.referrals.description"),
+            enabled: stateByKey.get(SAFEGUARD_KEYS.referralsEnabled)?.enabled ?? true,
+            enableAction: t("admin.safeguards.referrals.enable"),
+            disableAction: t("admin.safeguards.referrals.disable"),
+          },
         ]}
       />
     </div>

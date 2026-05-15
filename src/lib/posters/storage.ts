@@ -15,7 +15,12 @@ const projectRoot = /* turbopackIgnore: true */ process.cwd();
 
 function getStorageDriver(): StorageDriver {
   const configured = optionalEnv("STORAGE_DRIVER");
-  return configured === "local" || configured === "r2" ? configured : "local";
+  if (configured === "local" || configured === "r2") return configured;
+  return optionalEnv("R2_ACCESS") !== null &&
+    optionalEnv("R2_SECRET") !== null &&
+    optionalEnv("R2_LINK") !== null
+    ? "r2"
+    : "local";
 }
 
 function getLfsRoot() {
@@ -62,21 +67,40 @@ async function deleteLocal(key: string) {
 }
 
 type S3Env = {
-  accountId: string;
+  endpoint: string;
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
+  forcePathStyle: boolean;
 };
 
+function parseR2Link(value: string | null) {
+  if (value === null) return null;
+  try {
+    return new URL(value);
+  } catch {
+    throw new Error("R2_LINK must be a valid URL.");
+  }
+}
+
 function requireS3Env(): S3Env {
+  const accessKeyId = optionalEnv("R2_ACCESS") ?? optionalEnv("R2_ACCESS_KEY_ID");
+  const secretAccessKey = optionalEnv("R2_SECRET") ?? optionalEnv("R2_SECRET_ACCESS_KEY");
+  const r2Link = optionalEnv("R2_LINK");
   const accountId = optionalEnv("R2_ACCOUNT_ID");
-  const accessKeyId = optionalEnv("R2_ACCESS_KEY_ID");
-  const secretAccessKey = optionalEnv("R2_SECRET_ACCESS_KEY");
-  const bucket = optionalEnv("R2_BUCKET");
+  const parsedLink = parseR2Link(r2Link);
+  const linkBucket = parsedLink?.pathname.split("/").filter(Boolean).at(0) ?? null;
+  const bucket = optionalEnv("R2_BUCKET") ?? linkBucket;
+  const endpoint =
+    parsedLink !== null
+      ? parsedLink.origin
+      : accountId !== null
+        ? `https://${accountId}.r2.cloudflarestorage.com`
+        : null;
 
   if (
-    accountId === null ||
-    accountId === "" ||
+    endpoint === null ||
+    endpoint === "" ||
     accessKeyId === null ||
     accessKeyId === "" ||
     secretAccessKey === null ||
@@ -85,11 +109,11 @@ function requireS3Env(): S3Env {
     bucket === ""
   ) {
     throw new Error(
-      "R2 storage driver requires R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET.",
+      "R2 storage driver requires R2_ACCESS, R2_SECRET, R2_LINK, and R2_BUCKET unless R2_LINK contains the bucket path.",
     );
   }
 
-  return { accountId, accessKeyId, secretAccessKey, bucket };
+  return { endpoint, accessKeyId, secretAccessKey, bucket, forcePathStyle: parsedLink !== null };
 }
 
 async function getS3Client() {
@@ -99,7 +123,8 @@ async function getS3Client() {
     env,
     client: new S3Client({
       region: "auto",
-      endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
+      endpoint: env.endpoint,
+      forcePathStyle: env.forcePathStyle,
       credentials: {
         accessKeyId: env.accessKeyId,
         secretAccessKey: env.secretAccessKey,

@@ -1,20 +1,24 @@
 import {
   buildPosterRedirectUrl,
-  buildPosterReferralUrl,
+  buildPosterScanUrl,
+  formatPosterReferralCode,
   normalizeCampaignSlug,
 } from "@/lib/posters/config";
 import { generateMergedPosterGroupPdf, generatePosterPdf } from "@/lib/posters/pdf";
 import {
   createPoster,
   createPosterGroup,
-  findPosterByReferralCode,
+  createPostersForGroup,
+  countUserPosters,
+  deletePosterById,
+  deletePosterGroupById,
+  findPosterByPublicScanCode,
   findPosterForUser,
   findPosterGroupForUser,
   getGroupPosters,
   getUserPendingPosters,
   listUserPosterGroups,
   listUserPosters,
-  recordPosterScan,
   updatePosterMetadata,
   updatePosterProofAndVerification,
 } from "@/lib/posters/repository";
@@ -23,6 +27,7 @@ import { deletePosterProofFile, savePosterProofFile } from "@/lib/posters/storag
 import { PosterRequestError } from "@/lib/posters/http";
 import {
   MAX_POSTERS_PER_GROUP,
+  MAX_POSTERS_PER_USER,
   type CreatePosterGroupInput,
   type CreatePosterInput,
   type PosterGroupCharset,
@@ -32,12 +37,40 @@ import {
   type SubmitPosterProofInput,
 } from "@/lib/posters/types";
 
+const MAX_POSTER_NAME_LENGTH = 80;
+
 function isPosterStyle(value: string | null | undefined): value is PosterStyle {
-  return value === "color" || value === "bw" || value === "printer_efficient";
+  return value === "color" || value === "bw" || value === "printer_efficient" || value === "a4" || value === "a4_bw";
 }
 
 function isPosterGroupCharset(value: string | null | undefined): value is PosterGroupCharset {
   return value === "alphanumeric" || value === "numeric" || value === "alpha";
+}
+
+function normalizePosterName(value: string | null | undefined) {
+  const name = value?.trim() ?? "";
+  return name === "" ? null : name.slice(0, MAX_POSTER_NAME_LENGTH);
+}
+
+function requirePosterName(value: string | null | undefined, label: string) {
+  const name = normalizePosterName(value);
+  if (name === null) {
+    throw new PosterRequestError(`${label} is required.`, 400);
+  }
+  return name;
+}
+
+function getPosterName(poster: PosterRow) {
+  const name = poster.metadata.name;
+  return typeof name === "string" && name.trim() !== "" ? name : null;
+}
+
+function toClientPoster(poster: PosterRow, scanCount = 0) {
+  return {
+    ...poster,
+    name: getPosterName(poster),
+    scanCount,
+  };
 }
 
 async function persistPosterDecision(input: {
@@ -85,16 +118,17 @@ export async function listPosterDataForUser(userId: string) {
     listUserPosters(userId),
   ]);
 
-  const groupedPosters = new Map<string, PosterRow[]>();
-  const standalonePosters: PosterRow[] = [];
+  const groupedPosters = new Map<string, ReturnType<typeof toClientPoster>[]>();
+  const standalonePosters: ReturnType<typeof toClientPoster>[] = [];
 
   for (const poster of posters) {
+    const clientPoster = toClientPoster(poster);
     if (poster.poster_group_id !== null) {
       const existing = groupedPosters.get(poster.poster_group_id) ?? [];
-      existing.push(poster);
+      existing.push(clientPoster);
       groupedPosters.set(poster.poster_group_id, existing);
     } else {
-      standalonePosters.push(poster);
+      standalonePosters.push(clientPoster);
     }
   }
 
@@ -113,11 +147,17 @@ export async function createSinglePosterForUser(
     campaignSlug?: string | null;
     posterType?: string | null;
     charset?: string | null;
+    name?: string | null;
   },
 ) {
   const campaignSlug = normalizeCampaignSlug(input.campaignSlug);
   const posterType = isPosterStyle(input.posterType) ? input.posterType : "color";
   const charset = isPosterGroupCharset(input.charset) ? input.charset : "alphanumeric";
+  const name = normalizePosterName(input.name);
+  const existingCount = await countUserPosters(input.userId);
+  if (existingCount >= MAX_POSTERS_PER_USER) {
+    throw new PosterRequestError(`You can have at most ${MAX_POSTERS_PER_USER} posters.`, 400);
+  }
 
   return createPoster({
     userId: input.userId,
@@ -125,6 +165,7 @@ export async function createSinglePosterForUser(
     posterType,
     charset,
     posterGroupId: null,
+    metadata: name === null ? {} : { name },
   });
 }
 
@@ -139,16 +180,22 @@ export async function createPosterGroupForUser(
     charset?: string | null;
   },
 ) {
-  const count = Math.min(Math.max(input.count, 1), MAX_POSTERS_PER_GROUP);
+  const existingCount = await countUserPosters(input.userId);
+  const remaining = MAX_POSTERS_PER_USER - existingCount;
+  if (remaining <= 0) {
+    throw new PosterRequestError(`You can have at most ${MAX_POSTERS_PER_USER} posters.`, 400);
+  }
+  const count = Math.min(Math.max(input.count, 1), MAX_POSTERS_PER_GROUP, remaining);
   const campaignSlug = normalizeCampaignSlug(input.campaignSlug);
   const posterType = isPosterStyle(input.posterType) ? input.posterType : "color";
   const charset = isPosterGroupCharset(input.charset) ? input.charset : "alphanumeric";
+  const name = requirePosterName(input.name, "Poster group name");
 
   return createPosterGroup({
     userId: input.userId,
     campaignSlug,
     count,
-    name: input.name ?? null,
+    name,
     charset,
     posterType,
   });
@@ -171,6 +218,53 @@ export async function getPosterGroupForUserOrThrow(userId: string, groupId: stri
   return { group, posters };
 }
 
+export async function addPostersToGroupForUser(input: {
+  userId: string;
+  groupId: string;
+  count: number;
+}) {
+  const { group, posters } = await getPosterGroupForUserOrThrow(input.userId, input.groupId);
+  const count = Math.max(1, Math.floor(input.count));
+  const [userPosterCount] = await Promise.all([countUserPosters(input.userId)]);
+  const remaining = Math.min(
+    MAX_POSTERS_PER_GROUP - posters.length,
+    MAX_POSTERS_PER_USER - userPosterCount,
+  );
+  if (remaining <= 0) {
+    throw new PosterRequestError(`Poster groups can have at most ${MAX_POSTERS_PER_GROUP} posters.`, 400);
+  }
+  if (count > remaining) {
+    throw new PosterRequestError(`You can add at most ${remaining} more poster${remaining === 1 ? "" : "s"} to this group.`, 400);
+  }
+
+  return createPostersForGroup({
+    userId: input.userId,
+    group,
+    count,
+    posterType: posters[0]?.poster_type ?? "color",
+  });
+}
+
+export async function deletePosterForUser(userId: string, posterId: string) {
+  const poster = await getPosterForUserOrThrow(userId, posterId);
+  if (poster.verification_status === "success") {
+    throw new PosterRequestError("Accepted posters cannot be deleted.", 400);
+  }
+
+  await deletePosterById(poster.id);
+  return { poster };
+}
+
+export async function deletePosterGroupForUser(userId: string, groupId: string) {
+  const { group, posters } = await getPosterGroupForUserOrThrow(userId, groupId);
+  if (posters.some((poster) => poster.verification_status === "success")) {
+    throw new PosterRequestError("Poster groups with accepted posters cannot be deleted.", 400);
+  }
+
+  await deletePosterGroupById(group.id);
+  return { group, posters };
+}
+
 export async function getPosterPdfForUser(userId: string, posterId: string) {
   const poster = await getPosterForUserOrThrow(userId, posterId);
   return {
@@ -178,7 +272,7 @@ export async function getPosterPdfForUser(userId: string, posterId: string) {
     pdf: await generatePosterPdf({
       campaignSlug: poster.campaign_slug,
       style: poster.poster_type,
-      content: buildPosterReferralUrl(poster.referral_code),
+      content: buildPosterScanUrl(poster.qr_code_token),
       referralCode: poster.referral_code,
     }),
   };
@@ -193,12 +287,59 @@ export async function getPosterGroupPdfForUser(userId: string, groupId: string) 
   };
 }
 
+async function generatePosterZip(posters: PosterRow[]) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  await Promise.all(
+    posters.map(async (poster) => {
+      const bytes = await generatePosterPdf({
+        campaignSlug: poster.campaign_slug,
+        style: poster.poster_type,
+        content: buildPosterScanUrl(poster.qr_code_token),
+        referralCode: poster.referral_code,
+      });
+      const safe = formatPosterReferralCode(poster.referral_code).replace(/[^a-zA-Z0-9_-]/g, "");
+      zip.file(`poster-${safe}.pdf`, bytes);
+    }),
+  );
+  return zip.generateAsync({ type: "arraybuffer" });
+}
+
+export async function getPosterGroupZipForUser(userId: string, groupId: string) {
+  const { group, posters } = await getPosterGroupForUserOrThrow(userId, groupId);
+  return {
+    group,
+    posters,
+    zip: await generatePosterZip(posters),
+  };
+}
+
+export async function getBulkPosterPdfForUser(userId: string) {
+  const { groups, standalonePosters } = await listPosterDataForUser(userId);
+  const allPosters = [
+    ...standalonePosters,
+    ...groups.flatMap((g) => g.posters),
+  ];
+  return {
+    pdf: await generateMergedPosterGroupPdf(allPosters),
+    count: allPosters.length,
+  };
+}
+
+export async function getBulkPosterZipForUser(userId: string) {
+  const { groups, standalonePosters } = await listPosterDataForUser(userId);
+  const allPosters = [
+    ...standalonePosters,
+    ...groups.flatMap((g) => g.posters),
+  ];
+  return {
+    zip: await generatePosterZip(allPosters),
+    count: allPosters.length,
+  };
+}
+
 export async function submitPosterProof(input: SubmitPosterProofInput): Promise<ScanMatchResult> {
   const poster = await getPosterForUserOrThrow(input.userId, input.posterId);
-
-  if (!input.locationDescription || !input.locationDescription.trim()) {
-    throw new PosterRequestError("Location description is required.", 400);
-  }
 
   if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
     throw new PosterRequestError("Precise location is required to submit proof.", 400);
@@ -231,7 +372,7 @@ export async function submitPosterProof(input: SubmitPosterProofInput): Promise<
       locationAccuracy: input.locationAccuracy ?? null,
       metadata: {
         auto_verified: true,
-        expected_url: buildPosterReferralUrl(poster.referral_code),
+        expected_url: buildPosterScanUrl(poster.qr_code_token),
       },
     });
 
@@ -259,7 +400,7 @@ export async function submitPosterProof(input: SubmitPosterProofInput): Promise<
       metadata: {
         auto_verified: true,
         auto_matched_from_poster_id: poster.id,
-        expected_url: buildPosterReferralUrl(matchedPoster.referral_code),
+        expected_url: buildPosterScanUrl(matchedPoster.qr_code_token),
       },
     });
 
@@ -289,7 +430,7 @@ export async function submitPosterProof(input: SubmitPosterProofInput): Promise<
     locationAccuracy: input.locationAccuracy ?? null,
     metadata: {
       auto_verification_result: detectedQrCodes.length === 0 ? "qr_not_found" : "no_match",
-      expected_url: buildPosterReferralUrl(poster.referral_code),
+      expected_url: buildPosterScanUrl(poster.qr_code_token),
     },
   });
 
@@ -308,7 +449,7 @@ export async function scanPosterGroupProof(input: {
   userId: string;
   groupId: string;
   file: File;
-  locationDescription: string;
+  locationDescription?: string | null;
   latitude: number;
   longitude: number;
   locationAccuracy?: number | null;
@@ -375,7 +516,7 @@ export async function scanPosterGroupProof(input: {
     locationAccuracy: input.locationAccuracy ?? null,
     metadata: {
       auto_verification_result: "group_no_match",
-      expected_url: buildPosterReferralUrl(fallbackPoster.referral_code),
+      expected_url: buildPosterScanUrl(fallbackPoster.qr_code_token),
     },
   });
 
@@ -390,7 +531,7 @@ export async function scanPosterGroupProof(input: {
 export async function scanAnyUserPoster(input: {
   userId: string;
   file: File;
-  locationDescription: string;
+  locationDescription?: string | null;
   latitude: number;
   longitude: number;
   locationAccuracy?: number | null;
@@ -428,26 +569,11 @@ export async function scanAnyUserPoster(input: {
   });
 }
 
-export async function resolvePublicPosterScan(code: string, requestInfo: {
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  referrer?: string | null;
-}) {
-  const poster = await findPosterByReferralCode(code);
+export async function resolvePublicPosterScan(code: string) {
+  const poster = await findPosterByPublicScanCode(code);
   if (!poster) {
     return null;
   }
-
-  await recordPosterScan({
-    posterId: poster.id,
-    ipAddress: requestInfo.ipAddress,
-    userAgent: requestInfo.userAgent,
-    referrer: requestInfo.referrer,
-    metadata: {
-      referral_code: poster.referral_code,
-      campaign_slug: poster.campaign_slug,
-    },
-  });
 
   return {
     poster,

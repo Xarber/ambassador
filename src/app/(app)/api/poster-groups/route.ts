@@ -3,6 +3,7 @@ import {
   listPosterDataForUser,
 } from "@/lib/posters/service";
 import { isSameOriginRequest, posterErrorResponse, requirePosterSession } from "@/lib/posters/http";
+import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,16 @@ export async function POST(request: Request) {
   }
   try {
     const session = await requirePosterSession();
+    const rateLimit = await checkRateLimit({
+      scope: "poster-create",
+      key: getRateLimitKey(session.sub),
+      limit: 1_000,
+    });
+
+    if (!rateLimit.ok) {
+      return rateLimitResponse(rateLimit);
+    }
+
     const body = await request.json();
     const payload: Record<string, unknown> | null =
       typeof body === "object" && body !== null && !Array.isArray(body)

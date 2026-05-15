@@ -1,4 +1,5 @@
 import sql from "@/lib/database/client";
+import { normalizePosterReferralCode } from "@/lib/posters/config";
 import type {
   CreatePosterGroupInput,
   CreatePosterInput,
@@ -14,6 +15,10 @@ async function referralCodeExists(candidate: string) {
       SELECT 1 FROM posters WHERE referral_code = ${candidate}
       UNION ALL
       SELECT 1 FROM referral_links WHERE code = ${candidate}
+      UNION ALL
+      SELECT 1 FROM stardance_referral_codes WHERE code = ${candidate}
+      UNION ALL
+      SELECT 1 FROM users WHERE stardance_referral_code = ${candidate}
     ) AS exists
   `).at(0);
 
@@ -37,7 +42,7 @@ function randomFromCharset(charset: string, length: number) {
 
 async function generateUniqueReferralCode() {
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    const candidate = `AMB-${randomFromCharset("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", 8)}`;
+    const candidate = randomFromCharset("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", 5);
     if (!(await referralCodeExists(candidate))) {
       return candidate;
     }
@@ -72,7 +77,8 @@ export async function createPoster(input: CreatePosterInput) {
       qr_code_token,
       referral_code,
       poster_type,
-      verification_status
+      verification_status,
+      metadata
     )
     VALUES (
       ${id},
@@ -82,7 +88,8 @@ export async function createPoster(input: CreatePosterInput) {
       ${qrCodeToken},
       ${referralCode},
       ${posterType},
-      'pending'
+      'pending',
+      CAST(${JSON.stringify(input.metadata ?? {})} AS JSONB)
     )
     RETURNING *
   `;
@@ -158,6 +165,84 @@ export async function createPosterGroup(input: CreatePosterGroupInput) {
   });
 }
 
+export async function createPostersForGroup(input: {
+  userId: string;
+  group: PosterGroupRow;
+  count: number;
+  posterType: PosterRow["poster_type"];
+}) {
+  return sql.begin(async (tx) => {
+    const posters: PosterRow[] = [];
+    for (let index = 0; index < input.count; index += 1) {
+      const [poster] = await tx<PosterRow[]>`
+        INSERT INTO posters (
+          id,
+          user_id,
+          poster_group_id,
+          campaign_slug,
+          qr_code_token,
+          referral_code,
+          poster_type,
+          verification_status
+        )
+        VALUES (
+          ${crypto.randomUUID()},
+          ${input.userId},
+          ${input.group.id},
+          ${input.group.campaign_slug},
+          ${await generateUniqueQrToken()},
+          ${await generateUniqueReferralCode()},
+          ${input.posterType},
+          'pending'
+        )
+        RETURNING *
+      `;
+      if (poster !== undefined) {
+        posters.push(poster);
+      }
+    }
+
+    const [updatedGroup] = await tx<PosterGroupRow[]>`
+      UPDATE poster_groups
+      SET poster_count = poster_count + ${posters.length}, updated_at = NOW()
+      WHERE id = ${input.group.id} AND user_id = ${input.userId}
+      RETURNING *
+    `;
+
+    return { group: updatedGroup ?? input.group, posters };
+  });
+}
+
+export async function deletePosterById(posterId: string) {
+  await sql`
+    WITH deleted AS (
+      DELETE FROM posters
+      WHERE id = ${posterId}
+      RETURNING poster_group_id
+    )
+    UPDATE poster_groups
+    SET poster_count = GREATEST(poster_count - 1, 0), updated_at = NOW()
+    WHERE id IN (
+      SELECT poster_group_id
+      FROM deleted
+      WHERE poster_group_id IS NOT NULL
+    )
+  `;
+}
+
+export async function deletePosterGroupById(groupId: string) {
+  await sql.begin(async (tx) => {
+    await tx`
+      DELETE FROM posters
+      WHERE poster_group_id = ${groupId}
+    `;
+    await tx`
+      DELETE FROM poster_groups
+      WHERE id = ${groupId}
+    `;
+  });
+}
+
 export async function listUserPosterGroups(userId: string) {
   return sql<PosterGroupRow[]>`
     SELECT *
@@ -174,6 +259,16 @@ export async function listUserPosters(userId: string) {
     WHERE user_id = ${userId}
     ORDER BY created_at DESC
   `;
+}
+
+export async function countUserPosters(userId: string) {
+  const row = (await sql<{ count: string }[]>`
+    SELECT COUNT(*)::text AS count
+    FROM posters
+    WHERE user_id = ${userId}
+  `).at(0);
+
+  return Number.parseInt(row?.count ?? "0", 10);
 }
 
 export async function findPosterForUser(userId: string, posterId: string) {
@@ -199,14 +294,36 @@ export async function findPosterGroupForUser(userId: string, groupId: string) {
 }
 
 export async function findPosterByReferralCode(referralCode: string) {
+  const normalizedCode = normalizePosterReferralCode(referralCode);
   const poster = (await sql<PosterRow[]>`
     SELECT *
     FROM posters
-    WHERE referral_code = ${referralCode.toUpperCase()}
+    WHERE referral_code = ${normalizedCode}
     LIMIT 1
   `).at(0);
 
   return poster ?? null;
+}
+
+export async function findPosterByPublicScanCode(scanCode: string) {
+  const trimmed = scanCode.trim();
+
+  if (/^[a-f0-9]{32}$/i.test(trimmed)) {
+    const poster = (await sql<PosterRow[]>`
+      SELECT *
+      FROM posters
+      WHERE qr_code_token = ${trimmed.toLowerCase()}
+      LIMIT 1
+    `).at(0);
+
+    return poster ?? null;
+  }
+
+  if (/^AMB-[A-Z1-9]{8}$/i.test(trimmed)) {
+    return findPosterByReferralCode(trimmed);
+  }
+
+  return null;
 }
 
 export async function getGroupPosters(groupId: string) {
@@ -285,31 +402,4 @@ export async function updatePosterMetadata(posterId: string, metadata: PosterMet
   `;
 
   return poster;
-}
-
-export async function recordPosterScan(input: {
-  posterId: string;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  referrer?: string | null;
-  metadata?: PosterMetadata;
-}) {
-  await sql`
-    INSERT INTO poster_scans (
-      id,
-      poster_id,
-      ip_address,
-      user_agent,
-      referrer,
-      metadata
-    )
-    VALUES (
-      ${crypto.randomUUID()},
-      ${input.posterId},
-      ${input.ipAddress ?? null},
-      ${input.userAgent ?? null},
-      ${input.referrer ?? null},
-      CAST(${JSON.stringify(input.metadata ?? {})} AS JSONB)
-    )
-  `;
 }
