@@ -8,6 +8,8 @@ export type AdminActionEvent =
   | "hcb_credentials_reauthorized"
   | "global_safeguard_updated"
   | "application_tshirt_sent_updated"
+  | "poster_deleted"
+  | "poster_group_deleted"
   | "user_admin_password_rejected"
   | "user_demoted_from_admin"
   | "user_impersonation_started"

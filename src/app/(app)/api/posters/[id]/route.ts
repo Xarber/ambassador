@@ -4,8 +4,10 @@ import {
   movePosterForUser,
   renamePosterForUser,
 } from "@/lib/posters/service";
+import { logAdminActionEvent } from "@/lib/admin-action-events";
 import { isSameOriginRequest, posterErrorResponse, requirePosterSession } from "@/lib/posters/http";
 import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
+import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";
 
@@ -89,6 +91,22 @@ export async function DELETE(request: Request, context: RouteContext<"/api/poste
 
     const { id } = await context.params;
     const result = await deletePosterForUser(session.sub, id);
+    const poster = result.poster;
+    await logAdminActionEvent({
+      actorUserId: session.impersonator?.sub ?? session.sub,
+      targetUserId: poster.user_id,
+      action: "poster_deleted",
+      metadata: {
+        posterId: poster.id,
+        posterName: poster.name ?? null,
+        posterGroupId: poster.poster_group_id ?? null,
+        campaignSlug: poster.campaign_slug,
+        referralCode: poster.referral_code,
+        posterType: poster.poster_type,
+        verificationStatus: poster.verification_status,
+      },
+    });
+    revalidatePath("/admin/audit-log");
     return Response.json(result);
   } catch (error) {
     return posterErrorResponse(error, "Failed to delete poster.", 400);

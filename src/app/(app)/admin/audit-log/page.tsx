@@ -41,6 +41,8 @@ const EVENT_TYPES: AdminActionEvent[] = [
   "application_tshirt_sent_updated",
   "global_safeguard_updated",
   "hcb_credentials_reauthorized",
+  "poster_deleted",
+  "poster_group_deleted",
   "user_admin_password_rejected",
   "user_demoted_from_admin",
   "user_impersonation_started",

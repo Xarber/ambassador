@@ -16,6 +16,8 @@ const EVENT_LABELS: Record<AdminActionEvent, string> = {
   application_tshirt_sent_updated: "Application T-shirt status updated",
   global_safeguard_updated: "Global safeguard updated",
   hcb_credentials_reauthorized: "HCB credentials reauthorized",
+  poster_deleted: "Poster deleted",
+  poster_group_deleted: "Poster group deleted",
   user_admin_password_rejected: "Superuser password rejected",
   user_demoted_from_admin: "User removed as admin",
   user_hcb_grant_linked: "HCB grant linked",
@@ -36,6 +38,7 @@ const METADATA_LABELS: Record<string, string> = {
   authorizedHcbUserEmail: "Authorized HCB email",
   authorizedHcbUserId: "Authorized HCB user",
   authorizedHcbUserName: "Authorized HCB name",
+  campaignSlug: "Campaign",
   expiresAt: "Expires",
   flagKey: "Feature flag",
   grantId: "Grant",
@@ -48,6 +51,13 @@ const METADATA_LABELS: Record<string, string> = {
   nextSent: "Next T-shirt status",
   nextState: "Next dashboard state",
   organizationId: "Organization",
+  posterGroupId: "Poster group",
+  posterGroupName: "Poster group name",
+  posterId: "Poster",
+  posterName: "Poster name",
+  posterIds: "Posters",
+  posterCount: "Poster count",
+  posterType: "Poster type",
   previousGrantId: "Previous grant",
   previousEnabled: "Previous enabled state",
   previousIsAdmin: "Previous admin access",
@@ -57,11 +67,14 @@ const METADATA_LABELS: Record<string, string> = {
   previousSent: "Previous T-shirt status",
   previousState: "Previous dashboard state",
   purpose: "Purpose",
+  referralCode: "Referral code",
+  referralCodes: "Referral codes",
   safeguard: "Safeguard",
   scopes: "Scopes",
   source: "Source",
   status: "Application status",
   targetIsAdmin: "Target was admin",
+  verificationStatus: "Verification status",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -100,6 +113,17 @@ export function formatAuditEventSummary(event: AuditEventLike): string {
       return joinSentenceParts(
         `Reauthorized HCB credentials for ${formatMetadataValue(metadata.authorizedHcbUserName ?? metadata.authorizedHcbUserEmail ?? metadata.authorizedHcbUserId)}.`,
         metadata.expiresAt ? `Expires ${formatMetadataValue(metadata.expiresAt)}.` : null,
+      );
+    case "poster_deleted":
+      return joinSentenceParts(
+        `Deleted poster ${formatMetadataValue(metadata.referralCode ?? metadata.posterId)}.`,
+        metadata.posterName ? `It was named ${formatMetadataValue(metadata.posterName)}.` : null,
+        metadata.posterGroupName ? `It belonged to ${formatMetadataValue(metadata.posterGroupName)}.` : null,
+      );
+    case "poster_group_deleted":
+      return joinSentenceParts(
+        `Deleted poster group ${formatMetadataValue(metadata.posterGroupName ?? metadata.posterGroupId)}.`,
+        `It contained ${formatMetadataValue(metadata.posterCount)} poster${metadata.posterCount === 1 ? "" : "s"}.`,
       );
     case "user_admin_password_rejected":
       return `Rejected a superuser password attempt for ${formatAction(metadata.attemptedAction)}.`;
