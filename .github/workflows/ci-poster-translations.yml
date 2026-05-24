@@ -66,7 +66,8 @@ jobs:
             # Reject any file that doesn't match the naming scheme.
             mapfile -t stray < <(
               find "$regionals_dir" -maxdepth 1 -type f \
-                ! -regex '.*/stardance-\(letter\|a4\)-\(color\|bw\)-[a-z]\{2,8\}\.\(pdf\|webp\)$' \
+                -regextype posix-extended \
+                ! -regex '.*/stardance-(letter|a4)-(color|bw)-[a-z]{2,8}\.(pdf|webp)$' \
                 -printf '%p\n' \
               | sort
             )
