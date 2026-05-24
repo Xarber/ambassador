@@ -1,6 +1,9 @@
 # Hack Club's Stardance Ambassador
 Oooh yeah! Next.js 16 website for the [2026 Stardance ambassador program](https://ambassador.hackclub.com).
 
+# Translations
+Want to translate the posters into your region's language? See [this document.](https://github.com/hackclub/ambassador/wiki/Translations).
+
 # Help me set this up
 The following instructions are for a development environment. It is recommended that you set it up with the `Dockerfile.app` and `Dockerfile.qreader` profiles for production, especially on Coolify, so that you have rolling deploys!
 
