@@ -593,6 +593,7 @@ admin:
       top-ambassadors-empty: No ambassadors with posters or referrals yet.
       referrals:
         total: Total referrals
+        rsvp: RSVPs
         unverified: Unverified
         pending: Pending
         verified: Verified

@@ -45,6 +45,7 @@ type OutcomeSummaryRow = {
 
 type ReferralDropOffRow = {
   total_count: number;
+  rsvp_count: number;
   unverified_count: number;
   pending_count: number;
   verified_count: number;
@@ -217,6 +218,7 @@ export default async function AdminDashboard({
     sql<ReferralDropOffRow[]>`
       SELECT
         COUNT(*)::int AS total_count,
+        COUNT(*) FILTER (WHERE verification_status = 'rsvp')::int AS rsvp_count,
         COUNT(*) FILTER (WHERE verification_status = 'unverified')::int AS unverified_count,
         COUNT(*) FILTER (WHERE verification_status = 'pending')::int AS pending_count,
         COUNT(*) FILTER (WHERE verification_status = 'verified')::int AS verified_count,
@@ -268,9 +270,13 @@ export default async function AdminDashboard({
       JOIN users u ON u.id = c.user_id
       LEFT JOIN poster_counts pc ON pc.user_id = c.user_id
       LEFT JOIN referral_counts rc ON rc.user_id = c.user_id
-      ORDER BY (COALESCE(pc.poster_count, 0) + COALESCE(rc.referral_count, 0)) DESC,
-               COALESCE(pc.poster_count, 0) DESC,
-               COALESCE(rc.referral_count, 0) DESC
+      ORDER BY (
+                 COALESCE(pc.verified_poster_count, 0)
+                 + COALESCE(rc.verified_referral_count, 0)
+                 + COALESCE(rc.rsvp_count, 0)
+               ) DESC,
+               COALESCE(pc.verified_poster_count, 0) DESC,
+               COALESCE(rc.verified_referral_count, 0) DESC
       LIMIT 10
     `,
   ]);
@@ -279,6 +285,7 @@ export default async function AdminDashboard({
   const outcomeSummary = outcomeRows[0];
   const referralDropOff = referralDropOffRows[0] ?? {
     total_count: 0,
+    rsvp_count: 0,
     unverified_count: 0,
     pending_count: 0,
     verified_count: 0,
@@ -368,6 +375,11 @@ export default async function AdminDashboard({
       label: t("admin.overview.charts.referrals.total"),
       value: referralDropOff.total_count,
       fill: "var(--chart-visits)",
+    },
+    {
+      label: t("admin.overview.charts.referrals.rsvp"),
+      value: referralDropOff.rsvp_count,
+      fill: "var(--chart-signups)",
     },
     {
       label: t("admin.overview.charts.referrals.unverified"),

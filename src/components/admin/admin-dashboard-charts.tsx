@@ -323,14 +323,14 @@ export function AdminDashboardCharts({
                   />
                   <Tooltip cursor={false} content={<ChartTooltip locale={locale} />} />
                   <Bar
-                    dataKey="posters"
+                    dataKey="verifiedPosters"
                     name={messages.postersSeries}
                     stackId="a"
                     fill="var(--chart-approved)"
                     radius={[0, 0, 0, 0]}
                   />
                   <Bar
-                    dataKey="referrals"
+                    dataKey="verifiedReferrals"
                     name={messages.referralsSeries}
                     stackId="a"
                     fill="var(--chart-rejected)"
